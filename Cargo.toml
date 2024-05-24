@@ -1,8 +1,14 @@
 [package]
-name = "bousse"
+name = "Bousse"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+winit = "0.29.9"
+wgpu = "0.19.4"
+egui-winit = { version = "0.27.2" }
+egui = { version = "0.27.2" }
+egui-wgpu = { version = "0.27.2", features = ["winit"] }
+env_logger = "0.11.3"
+pollster = "0.3.0"
+log = "0.4.21"
