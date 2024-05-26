@@ -9,14 +9,18 @@ use winit::window::{Window, WindowBuilder};
 use crate::gpu::Gpu;
 use crate::gui::Gui;
 
+struct AppVariables {
+    pub fps: u8,
+    pub frame_counter: u32,
+    pub button_click_counter: u8,
+    pub show_debug_panel: bool,
+}
+
 pub struct App {
     pub window: Arc<Window>,
     pub gpu: Gpu,
     pub gui: Gui,
-    pub button_click_counter: u8,
-    pub frame_counter: u32,
-    pub fps: u8,
-    show_debug_panel: bool,
+    app_vars: AppVariables,
 }
 
 impl App {
@@ -35,14 +39,44 @@ impl App {
 
         let gui = Gui::new(&window, &gpu);
 
+        let app_vars = AppVariables {
+            fps: 24,
+            frame_counter: 0,
+            button_click_counter: 0,
+            show_debug_panel: false,
+        };
+
         Self {
             window: window,
             gpu: gpu,
             gui: gui,
-            button_click_counter: 0,
-            frame_counter: 0,
-            fps: 24,
-            show_debug_panel: true,
+            app_vars: app_vars,
+        }
+    }
+
+    fn surface_texture(&self) -> wgpu::SurfaceTexture {
+        self.gpu
+            .surface
+            .get_current_texture()
+            .expect("Failed to acquire next swap chain texture")
+    }
+
+    fn surface_view(&self, surface_texture: &wgpu::SurfaceTexture) -> wgpu::TextureView {
+        surface_texture
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default())
+    }
+
+    fn encoder(&self) -> wgpu::CommandEncoder {
+        self.gpu
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None })
+    }
+
+    fn screen_descriptor(&self) -> ScreenDescriptor {
+        ScreenDescriptor {
+            size_in_pixels: [self.gpu.config.width, self.gpu.config.height],
+            pixels_per_point: self.window.scale_factor() as f32,
         }
     }
 
@@ -56,27 +90,11 @@ impl App {
             }
 
             WindowEvent::RedrawRequested => {
-                self.frame_counter += 1;
+                self.app_vars.frame_counter += 1;
 
-                let surface_texture = self
-                    .gpu
-                    .surface
-                    .get_current_texture()
-                    .expect("Failed to acquire next swap chain texture");
-
-                let surface_view = surface_texture
-                    .texture
-                    .create_view(&wgpu::TextureViewDescriptor::default());
-
-                let mut encoder = self
-                    .gpu
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
-
-                let screen_descriptor = ScreenDescriptor {
-                    size_in_pixels: [self.gpu.config.width, self.gpu.config.height],
-                    pixels_per_point: self.window.scale_factor() as f32,
-                };
+                let mut encoder = self.encoder();
+                let surface_texture = self.surface_texture();
+                let surface_view = self.surface_view(&surface_texture);
 
                 self.gui.draw(
                     &self.gpu.device,
@@ -84,28 +102,8 @@ impl App {
                     &mut encoder,
                     &self.window,
                     &surface_view,
-                    screen_descriptor,
-                    |ui| {
-                        egui::CentralPanel::default().show(ui, |ui| {
-                            ui.label("Hello World!");
-                            if ui.button("Click me").clicked() {
-                                self.button_click_counter += 1;
-                            }
-                            ui.label(format!(
-                                "Thanks for clicking {}x ❤",
-                                self.button_click_counter
-                            ));
-                        });
-
-                        if self.show_debug_panel {
-                            egui::TopBottomPanel::bottom("debug_panel").show(ui, |ui| {
-                                ui.label("Debug Panel");
-                                ui.separator();
-                                ui.label(format!("frame_counter: {}", self.frame_counter));
-                                ui.label(format!("window_size: {:?}", self.window.inner_size()));
-                            });
-                        }
-                    },
+                    self.screen_descriptor(),
+                    |ctx| run_ui(ctx, &self.window, &mut self.app_vars),
                 );
 
                 self.gpu.queue.submit(Some(encoder.finish()));
@@ -120,8 +118,30 @@ impl App {
 
     pub fn on_resume_time_reached(&self, elwt: &EventLoopWindowTarget<()>) {
         elwt.set_control_flow(ControlFlow::wait_duration(Duration::from_millis(
-            (1000 as f32 / self.fps as f32) as u64,
+            (1000 as f32 / self.app_vars.fps as f32) as u64,
         )));
         self.window.request_redraw();
+    }
+}
+
+fn run_ui(ctx: &egui::Context, window: &Arc<Window>, app_vars: &mut AppVariables) {
+    egui::CentralPanel::default().show(ctx, |ui| {
+        ui.label("Hello World!");
+        if ui.button("Click me").clicked() {
+            app_vars.button_click_counter += 1;
+        }
+        ui.label(format!(
+            "Thanks for clicking {}x ❤",
+            app_vars.button_click_counter
+        ));
+    });
+
+    if app_vars.show_debug_panel {
+        egui::TopBottomPanel::bottom("debug_panel").show(ctx, |ui| {
+            ui.label("Debug Panel");
+            ui.separator();
+            ui.label(format!("frame_counter: {}", app_vars.frame_counter));
+            ui.label(format!("window_size: {:?}", window.inner_size()));
+        });
     }
 }

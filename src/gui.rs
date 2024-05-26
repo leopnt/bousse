@@ -59,12 +59,15 @@ impl Gui {
             .state
             .egui_ctx()
             .tessellate(full_output.shapes, self.pixels_per_point);
+
         for (id, image_delta) in &full_output.textures_delta.set {
             self.renderer
                 .update_texture(&device, &queue, *id, &image_delta);
         }
+
         self.renderer
             .update_buffers(&device, &queue, encoder, &tris, &screen_descriptor);
+
         let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                 view: &window_surface_view,
@@ -79,8 +82,11 @@ impl Gui {
             label: Some("Egui render pass"),
             occlusion_query_set: None,
         });
+
         self.renderer.render(&mut rpass, &tris, &screen_descriptor);
+
         drop(rpass);
+
         for x in &full_output.textures_delta.free {
             self.renderer.free_texture(x)
         }
