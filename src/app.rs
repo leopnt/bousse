@@ -2,9 +2,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use egui_wgpu::ScreenDescriptor;
-use winit::event::{ElementState, KeyEvent, Modifiers, WindowEvent};
+use winit::event::{DeviceEvent, ElementState, KeyEvent, Modifiers, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget};
-use winit::keyboard::PhysicalKey;
+use winit::keyboard::{KeyCode, PhysicalKey};
 use winit::window::{Window, WindowBuilder};
 
 use crate::gpu::Gpu;
@@ -143,10 +143,14 @@ impl App {
         match (physical_key, state, repeat) {
             (PhysicalKey::Code(KeyCode::KeyD), ElementState::Pressed, false) => {
                 self.app_vars.show_debug_panel = !self.app_vars.show_debug_panel;
-            },
+            }
 
-            _ => ()
+            _ => (),
         }
+    }
+
+    pub fn on_device_event(&mut self, event: DeviceEvent) {
+        println!("DEVICE EVENT: {:?}", event);
     }
 
     pub fn on_resume_time_reached(&self, elwt: &EventLoopWindowTarget<()>) {

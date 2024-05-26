@@ -21,7 +21,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut app = App::new(&event_loop);
 
     event_loop.run(move |event, elwt| match event {
-        Event::AboutToWait => {}
+        Event::AboutToWait => {},
+        Event::DeviceEvent { event, .. } => app.on_device_event(event),
         Event::WindowEvent { event, .. } => app.on_window_event(event, elwt),
         Event::NewEvents(StartCause::ResumeTimeReached { .. }) => app.on_resume_time_reached(elwt),
         _ => (),
