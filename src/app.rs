@@ -2,8 +2,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use egui_wgpu::ScreenDescriptor;
-use winit::event::WindowEvent;
+use winit::event::{ElementState, Modifiers, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget};
+use winit::keyboard::PhysicalKey;
 use winit::window::{Window, WindowBuilder};
 
 use crate::gpu::Gpu;
@@ -114,6 +115,14 @@ impl App {
             }
             _ => (),
         }
+    }
+
+    pub fn on_modifiers_key_changed(&mut self, modifiers: Modifiers) {
+        println!("{:?}", modifiers);
+    }
+
+    pub fn on_physical_key_event(&mut self, physical_key: PhysicalKey, state: ElementState, repeat: bool) {
+        println!("{:?}, {:?}, {:?}", physical_key, state, repeat);
     }
 
     pub fn on_resume_time_reached(&self, elwt: &EventLoopWindowTarget<()>) {
