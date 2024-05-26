@@ -140,7 +140,13 @@ impl App {
     }
 
     pub fn on_key_event(&mut self, physical_key: PhysicalKey, state: ElementState, repeat: bool) {
-        println!("{:?}, {:?}, {:?}", physical_key, state, repeat);
+        match (physical_key, state, repeat) {
+            (PhysicalKey::Code(KeyCode::KeyD), ElementState::Pressed, false) => {
+                self.app_vars.show_debug_panel = !self.app_vars.show_debug_panel;
+            },
+
+            _ => ()
+        }
     }
 
     pub fn on_resume_time_reached(&self, elwt: &EventLoopWindowTarget<()>) {
