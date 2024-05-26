@@ -1,7 +1,7 @@
 use std::{error::Error, time::Duration};
 
 use winit::{
-    event::{Event, KeyEvent, StartCause, WindowEvent},
+    event::{Event, StartCause},
     event_loop::{ControlFlow, EventLoop},
 };
 
@@ -22,37 +22,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     event_loop.run(move |event, elwt| match event {
         Event::AboutToWait => {}
-
-        Event::WindowEvent {
-            event: WindowEvent::ModifiersChanged(modifiers),
-            ..
-        } => {
-            app.on_modifiers_key_changed(modifiers);
-        }
-
-        Event::WindowEvent {
-            event:
-                WindowEvent::KeyboardInput {
-                    event:
-                        KeyEvent {
-                            physical_key,
-                            state,
-                            repeat,
-                            ..
-                        },
-                    ..
-                },
-            ..
-        } => {
-            app.on_physical_key_event(physical_key, state, repeat);
-        }
-
-        Event::WindowEvent { event, .. } => {
-            app.on_window_event(event, elwt);
-        }
-
+        Event::WindowEvent { event, .. } => app.on_window_event(event, elwt),
         Event::NewEvents(StartCause::ResumeTimeReached { .. }) => app.on_resume_time_reached(elwt),
-
         _ => (),
     })?;
 

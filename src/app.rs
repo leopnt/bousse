@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use egui_wgpu::ScreenDescriptor;
-use winit::event::{ElementState, Modifiers, WindowEvent};
+use winit::event::{ElementState, KeyEvent, Modifiers, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget};
 use winit::keyboard::PhysicalKey;
 use winit::window::{Window, WindowBuilder};
@@ -113,6 +113,24 @@ impl App {
             WindowEvent::Resized(physical_size) => {
                 self.gpu.resize(physical_size);
             }
+
+            WindowEvent::ModifiersChanged(modifiers) => {
+                self.on_modifiers_key_changed(modifiers);
+            }
+
+            WindowEvent::KeyboardInput {
+                event:
+                    KeyEvent {
+                        physical_key,
+                        state,
+                        repeat,
+                        ..
+                    },
+                ..
+            } => {
+                self.on_key_event(physical_key, state, repeat);
+            }
+
             _ => (),
         }
     }
@@ -121,7 +139,7 @@ impl App {
         println!("{:?}", modifiers);
     }
 
-    pub fn on_physical_key_event(&mut self, physical_key: PhysicalKey, state: ElementState, repeat: bool) {
+    pub fn on_key_event(&mut self, physical_key: PhysicalKey, state: ElementState, repeat: bool) {
         println!("{:?}, {:?}, {:?}", physical_key, state, repeat);
     }
 
