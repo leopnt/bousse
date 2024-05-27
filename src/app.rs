@@ -4,7 +4,7 @@ use std::time::Duration;
 use egui_wgpu::ScreenDescriptor;
 use winit::event::{DeviceEvent, ElementState, KeyEvent, Modifiers, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget};
-use winit::keyboard::{KeyCode, PhysicalKey};
+use winit::keyboard::{KeyCode, ModifiersState, PhysicalKey};
 use winit::window::{Window, WindowBuilder};
 
 use crate::gpu::Gpu;
@@ -15,6 +15,7 @@ struct AppVariables {
     pub frame_counter: u32,
     pub button_click_counter: u8,
     pub show_debug_panel: bool,
+    pub modifiers_key: Modifiers,
 }
 
 pub struct App {
@@ -45,6 +46,7 @@ impl App {
             frame_counter: 0,
             button_click_counter: 0,
             show_debug_panel: false,
+            modifiers_key: Modifiers::default(),
         };
 
         Self {
@@ -136,12 +138,22 @@ impl App {
     }
 
     pub fn on_modifiers_key_changed(&mut self, modifiers: Modifiers) {
-        println!("{:?}", modifiers);
+        self.app_vars.modifiers_key = modifiers;
     }
 
     pub fn on_key_event(&mut self, physical_key: PhysicalKey, state: ElementState, repeat: bool) {
-        match (physical_key, state, repeat) {
-            (PhysicalKey::Code(KeyCode::KeyD), ElementState::Pressed, false) => {
+        match (
+            physical_key,
+            state,
+            repeat,
+            self.app_vars.modifiers_key.state(),
+        ) {
+            (
+                PhysicalKey::Code(KeyCode::KeyD),
+                ElementState::Pressed,
+                false,
+                ModifiersState::CONTROL,
+            ) => {
                 self.app_vars.show_debug_panel = !self.app_vars.show_debug_panel;
             }
 
