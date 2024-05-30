@@ -8,6 +8,8 @@ use winit::{
 mod app;
 mod gpu;
 mod gui;
+mod mixer;
+
 use app::App;
 use dotenv::dotenv;
 
