@@ -9,9 +9,11 @@ mod app;
 mod gpu;
 mod gui;
 use app::App;
+use dotenv::dotenv;
 
 fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
+    dotenv().ok();
 
     println!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
 

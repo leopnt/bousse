@@ -12,3 +12,5 @@ egui-wgpu = { version = "0.27.2", features = ["winit"] }
 env_logger = "0.11.3"
 pollster = "0.3.0"
 log = "0.4.21"
+kira = "0.9.0"
+dotenv = "0.15.0"

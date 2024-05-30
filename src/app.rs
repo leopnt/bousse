@@ -1,3 +1,4 @@
+use std::env;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -7,15 +8,29 @@ use winit::event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget};
 use winit::keyboard::{KeyCode, ModifiersState, PhysicalKey};
 use winit::window::{Window, WindowBuilder};
 
+use kira::manager::{backend::DefaultBackend, AudioManager, AudioManagerSettings};
+use kira::sound::streaming::{StreamingSoundData, StreamingSoundHandle, StreamingSoundSettings};
+use kira::sound::FromFileError;
+use kira::track::TrackHandle;
+use kira::track::{TrackBuilder, TrackRoutes};
+use kira::tween::Tween;
+
 use crate::gpu::Gpu;
 use crate::gui::Gui;
 
 struct AppVariables {
     pub fps: u8,
     pub frame_counter: u32,
-    pub button_click_counter: u8,
     pub show_debug_panel: bool,
     pub modifiers_key: Modifiers,
+    pub audio_manager: AudioManager,
+    pub master: TrackHandle,
+    pub cue: TrackHandle,
+    pub cue_mix: f64,
+    pub sound_one: StreamingSoundHandle<FromFileError>,
+    pub track_one: TrackHandle,
+    pub cue_one: bool,
+    pub ch_one: f64,
 }
 
 pub struct App {
@@ -23,6 +38,11 @@ pub struct App {
     pub gpu: Gpu,
     pub gui: Gui,
     app_vars: AppVariables,
+}
+
+/// Explode a given value between 0 and 1 into respective mixed values
+fn cue_crossfade(norm_value: f64) -> (f64, f64) {
+    (1. - norm_value, norm_value)
 }
 
 impl App {
@@ -41,12 +61,42 @@ impl App {
 
         let gui = Gui::new(&window, &gpu);
 
+        let mut manager =
+            AudioManager::<DefaultBackend>::new(AudioManagerSettings::default()).unwrap();
+
+        let master = manager.add_sub_track(TrackBuilder::new()).unwrap();
+        let cue = manager.add_sub_track(TrackBuilder::new()).unwrap();
+
+        let track_one = manager
+            .add_sub_track(
+                TrackBuilder::new().volume(1.).routes(
+                    TrackRoutes::empty()
+                        .with_route(&master, 0.0)
+                        .with_route(&cue, 0.0),
+                ),
+            )
+            .unwrap();
+
+        let settings = StreamingSoundSettings::new().output_destination(&track_one);
+
+        let sound_path = env::var("SOUND_PATH").expect("SOUND_PATH environment variable not set");
+        let sound = StreamingSoundData::from_file(sound_path).unwrap();
+
+        let mut sound_one = manager.play(sound.with_settings(settings)).unwrap();
+
         let app_vars = AppVariables {
             fps: 24,
             frame_counter: 0,
-            button_click_counter: 0,
             show_debug_panel: false,
             modifiers_key: Modifiers::default(),
+            audio_manager: manager,
+            sound_one: sound_one,
+            master: master,
+            cue: cue,
+            track_one: track_one,
+            cue_mix: 0.5,
+            cue_one: false,
+            ch_one: 0.0,
         };
 
         Self {
@@ -175,14 +225,28 @@ impl App {
 
 fn run_ui(ctx: &egui::Context, window: &Arc<Window>, app_vars: &mut AppVariables) {
     egui::CentralPanel::default().show(ctx, |ui| {
-        ui.label("Hello World!");
-        if ui.button("Click me").clicked() {
-            app_vars.button_click_counter += 1;
-        }
-        ui.label(format!(
-            "Thanks for clicking {}x ❤",
-            app_vars.button_click_counter
-        ));
+        ui.toggle_value(&mut app_vars.cue_one, "Cue ONE");
+
+        ui.add(egui::Slider::new(&mut app_vars.cue_mix, 0.0..=1.0).text("Cue Mix"));
+        ui.add(egui::Slider::new(&mut app_vars.ch_one, 0.0..=1.0).text("Ch ONE"));
+
+        let (cue_volume, master_volume) = cue_crossfade(app_vars.cue_mix);
+
+        app_vars.master.set_volume(master_volume, Tween::default());
+        app_vars.cue.set_volume(cue_volume, Tween::default());
+
+        app_vars
+            .track_one
+            .set_route(&app_vars.master, app_vars.ch_one, Tween::default())
+            .unwrap();
+        app_vars
+            .track_one
+            .set_route(
+                &app_vars.cue,
+                if app_vars.cue_one { 1.0 } else { 0.0 },
+                Tween::default(),
+            )
+            .unwrap();
     });
 
     if app_vars.show_debug_panel {
@@ -191,6 +255,10 @@ fn run_ui(ctx: &egui::Context, window: &Arc<Window>, app_vars: &mut AppVariables
             ui.separator();
             ui.label(format!("frame_counter: {}", app_vars.frame_counter));
             ui.label(format!("window_size: {:?}", window.inner_size()));
+            ui.label(format!(
+                "audio_manager.num_sub_tracks: {:?}",
+                app_vars.audio_manager.num_sub_tracks()
+            ));
         });
     }
 }
