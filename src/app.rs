@@ -40,8 +40,10 @@ pub struct App {
     app_vars: AppVariables,
 }
 
-/// Explode a given value between 0 and 1 into respective mixed values
+/// Explode a given value between 0.0 and 1.0 into respective mixed values.
+/// The sum of the two output values is 1.0
 fn cue_crossfade(norm_value: f64) -> (f64, f64) {
+    let norm_value = norm_value.clamp(0.0, 1.0);
     (1. - norm_value, norm_value)
 }
 
