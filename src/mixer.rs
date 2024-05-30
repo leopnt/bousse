@@ -17,6 +17,7 @@ pub struct Mixer {
     cue_mix_value: f64,
 
     ch_one_track: TrackHandle,
+    sound_one_origin: StaticSoundData,
     sound_one: StaticSoundHandle,
     cue_one_enabled: bool,
     ch_one_volume: f64,
@@ -24,6 +25,7 @@ pub struct Mixer {
     pitch_one: f64,
 
     ch_two_track: TrackHandle,
+    sound_two_origin: StaticSoundData,
     sound_two: StaticSoundHandle,
     cue_two_enabled: bool,
     ch_two_volume: f64,
@@ -61,15 +63,19 @@ impl Mixer {
 
         let sound_path =
             env::var("SOUND_PATH_ONE").expect("SOUND_PATH_ONE environment variable not set");
-        let sound = StaticSoundData::from_file(sound_path).unwrap();
+        let sound_one_origin = StaticSoundData::from_file(sound_path).unwrap();
         let settings = StaticSoundSettings::new().output_destination(&track_one);
-        let sound_one = manager.play(sound.with_settings(settings)).unwrap();
+        let sound_one = manager
+            .play(sound_one_origin.with_settings(settings))
+            .unwrap();
 
         let sound_path =
             env::var("SOUND_PATH_TWO").expect("SOUND_PATH_TWO environment variable not set");
-        let sound = StaticSoundData::from_file(sound_path).unwrap();
+        let sound_two_origin = StaticSoundData::from_file(sound_path).unwrap();
         let settings = StaticSoundSettings::new().output_destination(&track_two);
-        let sound_two = manager.play(sound.with_settings(settings)).unwrap();
+        let sound_two = manager
+            .play(sound_two_origin.with_settings(settings))
+            .unwrap();
 
         Self {
             _audio_manager: manager,
@@ -77,6 +83,7 @@ impl Mixer {
             cue_track: cue,
             cue_mix_value: 0.5,
 
+            sound_one_origin: sound_one_origin,
             sound_one: sound_one,
             ch_one_track: track_one,
             cue_one_enabled: false,
@@ -84,6 +91,7 @@ impl Mixer {
             pitch_one_target: 1.0,
             pitch_one: 1.0,
 
+            sound_two_origin: sound_two_origin,
             sound_two: sound_two,
             ch_two_track: track_two,
             cue_two_enabled: false,
@@ -131,6 +139,22 @@ impl Mixer {
                 Tween::default(),
             )
             .unwrap();
+    }
+
+    pub fn get_duration_one(&self) -> f64 {
+        self.sound_one_origin.duration().as_secs_f64() / self.pitch_one
+    }
+
+    pub fn get_duration_two(&self) -> f64 {
+        self.sound_two_origin.duration().as_secs_f64() / self.pitch_two
+    }
+
+    pub fn get_position_one(&self) -> f64 {
+        self.sound_one.position()
+    }
+
+    pub fn get_position_two(&self) -> f64 {
+        self.sound_two.position()
     }
 
     pub fn get_ch_one_volume(&self) -> f64 {

@@ -12,6 +12,7 @@ use winit::window::{CursorGrabMode, Window, WindowBuilder};
 use crate::gpu::Gpu;
 use crate::gui::Gui;
 use crate::mixer::Mixer;
+use crate::utils::to_min_sec_millis_str;
 
 #[derive(PartialEq)]
 pub enum MixerFocus {
@@ -265,6 +266,22 @@ fn run_ui(ctx: &egui::Context, window: &Arc<Window>, app_vars: &mut AppVariables
         let mut pitch_two = app_vars.mixer.get_pitch_two();
         ui.add(egui::Slider::new(&mut pitch_two, 0.92..=1.08).text("PITCH TWO"));
         app_vars.mixer.set_pitch_two(pitch_two);
+
+        let position_one = app_vars.mixer.get_position_one();
+        let duration_one = app_vars.mixer.get_duration_one();
+        ui.label(format!(
+            "Track One: {} / {}",
+            to_min_sec_millis_str(position_one),
+            to_min_sec_millis_str(duration_one)
+        ));
+
+        let position_two = app_vars.mixer.get_position_two();
+        let duration_two = app_vars.mixer.get_duration_two();
+        ui.label(format!(
+            "Track Two: {} / {}",
+            to_min_sec_millis_str(position_two),
+            to_min_sec_millis_str(duration_two)
+        ));
     });
 
     if app_vars.show_debug_panel {
