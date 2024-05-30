@@ -183,6 +183,10 @@ fn run_ui(ctx: &egui::Context, window: &Arc<Window>, app_vars: &mut AppVariables
         ui.toggle_value(&mut cue_one, "Cue ONE");
         app_vars.mixer.set_cue_one(cue_one);
 
+        let mut cue_two = app_vars.mixer.is_cue_two_enabled();
+        ui.toggle_value(&mut cue_two, "Cue TWO");
+        app_vars.mixer.set_cue_two(cue_two);
+
         let mut cue_mix = app_vars.mixer.get_cue_mix_value();
         ui.add(egui::Slider::new(&mut cue_mix, 0.0..=1.0).text("Cue Mix"));
         app_vars.mixer.set_cue_mix_value(cue_mix);
@@ -190,6 +194,10 @@ fn run_ui(ctx: &egui::Context, window: &Arc<Window>, app_vars: &mut AppVariables
         let mut ch_one = app_vars.mixer.get_ch_one_volume();
         ui.add(egui::Slider::new(&mut ch_one, 0.0..=1.0).text("Ch ONE"));
         app_vars.mixer.set_ch_one_volume(ch_one);
+
+        let mut ch_two = app_vars.mixer.get_ch_two_volume();
+        ui.add(egui::Slider::new(&mut ch_two, 0.0..=1.0).text("Ch TWO"));
+        app_vars.mixer.set_ch_two_volume(ch_two);
     });
 
     if app_vars.show_debug_panel {
