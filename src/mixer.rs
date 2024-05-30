@@ -2,10 +2,7 @@ use std::env;
 
 use kira::{
     manager::{AudioManager, AudioManagerSettings, DefaultBackend},
-    sound::{
-        streaming::{StreamingSoundData, StreamingSoundHandle, StreamingSoundSettings},
-        FromFileError,
-    },
+    sound::static_sound::{StaticSoundData, StaticSoundHandle, StaticSoundSettings},
     track::{TrackBuilder, TrackHandle, TrackRoutes},
     tween::Tween,
 };
@@ -13,21 +10,21 @@ use kira::{
 use crate::utils::lerp;
 
 pub struct Mixer {
-    audio_manager: AudioManager,
+    _audio_manager: AudioManager,
 
     master_track: TrackHandle,
     cue_track: TrackHandle,
     cue_mix_value: f64,
 
     ch_one_track: TrackHandle,
-    sound_one: StreamingSoundHandle<FromFileError>,
+    sound_one: StaticSoundHandle,
     cue_one_enabled: bool,
     ch_one_volume: f64,
     pitch_one_target: f64,
     pitch_one: f64,
 
     ch_two_track: TrackHandle,
-    sound_two: StreamingSoundHandle<FromFileError>,
+    sound_two: StaticSoundHandle,
     cue_two_enabled: bool,
     ch_two_volume: f64,
     pitch_two_target: f64,
@@ -64,18 +61,18 @@ impl Mixer {
 
         let sound_path =
             env::var("SOUND_PATH_ONE").expect("SOUND_PATH_ONE environment variable not set");
-        let sound = StreamingSoundData::from_file(sound_path).unwrap();
-        let settings = StreamingSoundSettings::new().output_destination(&track_one);
-        let mut sound_one = manager.play(sound.with_settings(settings)).unwrap();
+        let sound = StaticSoundData::from_file(sound_path).unwrap();
+        let settings = StaticSoundSettings::new().output_destination(&track_one);
+        let sound_one = manager.play(sound.with_settings(settings)).unwrap();
 
         let sound_path =
             env::var("SOUND_PATH_TWO").expect("SOUND_PATH_TWO environment variable not set");
-        let sound = StreamingSoundData::from_file(sound_path).unwrap();
-        let settings = StreamingSoundSettings::new().output_destination(&track_two);
-        let mut sound_two = manager.play(sound.with_settings(settings)).unwrap();
+        let sound = StaticSoundData::from_file(sound_path).unwrap();
+        let settings = StaticSoundSettings::new().output_destination(&track_two);
+        let sound_two = manager.play(sound.with_settings(settings)).unwrap();
 
         Self {
-            audio_manager: manager,
+            _audio_manager: manager,
             master_track: master,
             cue_track: cue,
             cue_mix_value: 0.5,
