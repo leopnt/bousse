@@ -195,9 +195,18 @@ fn run_ui(ctx: &egui::Context, window: &Arc<Window>, app_vars: &mut AppVariables
         ui.add(egui::Slider::new(&mut ch_one, 0.0..=1.0).text("Ch ONE"));
         app_vars.mixer.set_ch_one_volume(ch_one);
 
+        let mut pitch_one = app_vars.mixer.get_pitch_one();
+        ui.add(egui::Slider::new(&mut pitch_one, 0.92..=1.08).text("PITCH ONE"));
+        app_vars.mixer.set_pitch_one(pitch_one);
+
         let mut ch_two = app_vars.mixer.get_ch_two_volume();
         ui.add(egui::Slider::new(&mut ch_two, 0.0..=1.0).text("Ch TWO"));
         app_vars.mixer.set_ch_two_volume(ch_two);
+
+        let mut pitch_two = app_vars.mixer.get_pitch_two();
+        ui.add(egui::Slider::new(&mut pitch_two, 0.92..=1.08).text("PITCH TWO"));
+        app_vars.mixer.set_pitch_two(pitch_two);
+
     });
 
     if app_vars.show_debug_panel {

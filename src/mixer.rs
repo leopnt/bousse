@@ -21,11 +21,13 @@ pub struct Mixer {
     sound_one: StreamingSoundHandle<FromFileError>,
     cue_one_enabled: bool,
     ch_one_volume: f64,
+    pitch_one: f64,
 
     ch_two_track: TrackHandle,
     sound_two: StreamingSoundHandle<FromFileError>,
     cue_two_enabled: bool,
     ch_two_volume: f64,
+    pitch_two: f64,
 }
 
 impl Mixer {
@@ -56,7 +58,6 @@ impl Mixer {
             )
             .unwrap();
 
-
         let sound_path =
             env::var("SOUND_PATH_ONE").expect("SOUND_PATH_ONE environment variable not set");
         let sound = StreamingSoundData::from_file(sound_path).unwrap();
@@ -79,11 +80,13 @@ impl Mixer {
             ch_one_track: track_one,
             cue_one_enabled: false,
             ch_one_volume: 0.0,
+            pitch_one: 1.0,
 
             sound_two: sound_two,
             ch_two_track: track_two,
             cue_two_enabled: false,
             ch_two_volume: 0.0,
+            pitch_two: 1.0,
         }
     }
 
@@ -119,6 +122,28 @@ impl Mixer {
 
     pub fn get_ch_one_volume(&self) -> f64 {
         self.ch_one_volume
+    }
+
+    pub fn get_pitch_one(&self) -> f64 {
+        self.pitch_one
+    }
+
+    pub fn set_pitch_one(&mut self, pitch: f64) {
+        self.pitch_one = pitch;
+
+        self.sound_one
+            .set_playback_rate(self.pitch_one, Tween::default());
+    }
+
+    pub fn get_pitch_two(&self) -> f64 {
+        self.pitch_two
+    }
+
+    pub fn set_pitch_two(&mut self, pitch: f64) {
+        self.pitch_two = pitch;
+
+        self.sound_two
+            .set_playback_rate(self.pitch_two, Tween::default());
     }
 
     pub fn set_ch_one_volume(&mut self, volume: f64) {
