@@ -2,29 +2,37 @@ use std::env;
 use std::sync::Arc;
 use std::time::Duration;
 
+use egui::Color32;
 use egui_wgpu::ScreenDescriptor;
 use winit::event::{DeviceEvent, ElementState, KeyEvent, Modifiers, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget};
 use winit::keyboard::{KeyCode, ModifiersState, PhysicalKey};
-use winit::window::{Window, WindowBuilder};
+use winit::window::{CursorGrabMode, Window, WindowBuilder};
 
 use crate::gpu::Gpu;
 use crate::gui::Gui;
 use crate::mixer::Mixer;
 
-struct AppVariables {
+#[derive(PartialEq)]
+pub enum MixerFocus {
+    ChOne,
+    ChTwo,
+}
+
+pub struct AppVariables {
     pub fps: u8,
     pub frame_counter: u32,
     pub show_debug_panel: bool,
     pub modifiers_key: Modifiers,
     pub mixer: Mixer,
+    pub mixer_focus: MixerFocus,
 }
 
 pub struct App {
     pub window: Arc<Window>,
     pub gpu: Gpu,
     pub gui: Gui,
-    app_vars: AppVariables,
+    pub app_vars: AppVariables,
 }
 
 impl App {
@@ -51,6 +59,7 @@ impl App {
             show_debug_panel: false,
             modifiers_key: Modifiers::default(),
             mixer: mixer,
+            mixer_focus: MixerFocus::ChOne,
         };
 
         Self {
@@ -143,6 +152,13 @@ impl App {
 
     pub fn on_modifiers_key_changed(&mut self, modifiers: Modifiers) {
         self.app_vars.modifiers_key = modifiers;
+
+        match self.app_vars.modifiers_key.state() {
+            ModifiersState::ALT => {
+                self.window.set_cursor_grab(CursorGrabMode::Locked).unwrap();
+            }
+            _ => self.window.set_cursor_grab(CursorGrabMode::None).unwrap(),
+        }
     }
 
     pub fn on_key_event(&mut self, physical_key: PhysicalKey, state: ElementState, repeat: bool) {
@@ -166,7 +182,23 @@ impl App {
     }
 
     pub fn on_device_event(&mut self, event: DeviceEvent) {
-        println!("DEVICE EVENT: {:?}", event);
+        match event {
+            DeviceEvent::MouseMotion { delta } => {
+                match (
+                    &self.app_vars.mixer_focus,
+                    self.app_vars.modifiers_key.state(),
+                ) {
+                    (MixerFocus::ChOne, ModifiersState::ALT) => {
+                        self.app_vars.mixer.soft_touch_one(delta.1 / 1000.0);
+                    }
+                    (MixerFocus::ChTwo, ModifiersState::ALT) => {
+                        self.app_vars.mixer.soft_touch_two(delta.1 / 1000.0);
+                    }
+                    _ => (),
+                }
+            }
+            _ => (),
+        }
     }
 
     pub fn on_resume_time_reached(&self, elwt: &EventLoopWindowTarget<()>) {
@@ -179,6 +211,33 @@ impl App {
 
 fn run_ui(ctx: &egui::Context, window: &Arc<Window>, app_vars: &mut AppVariables) {
     egui::CentralPanel::default().show(ctx, |ui| {
+        if ui
+            .add(
+                egui::Button::new("ChOne").fill(if app_vars.mixer_focus == MixerFocus::ChOne {
+                    Color32::from_rgb(200, 100, 100)
+                } else {
+                    Color32::from_rgb(100, 100, 100)
+                }),
+            )
+            .clicked()
+        {
+            app_vars.mixer_focus = MixerFocus::ChOne;
+        }
+
+        // Button for ChTwo
+        if ui
+            .add(
+                egui::Button::new("ChTwo").fill(if app_vars.mixer_focus == MixerFocus::ChTwo {
+                    Color32::from_rgb(100, 100, 200)
+                } else {
+                    Color32::from_rgb(100, 100, 100)
+                }),
+            )
+            .clicked()
+        {
+            app_vars.mixer_focus = MixerFocus::ChTwo;
+        }
+
         let mut cue_one = app_vars.mixer.is_cue_one_enabled();
         ui.toggle_value(&mut cue_one, "Cue ONE");
         app_vars.mixer.set_cue_one(cue_one);
@@ -206,7 +265,6 @@ fn run_ui(ctx: &egui::Context, window: &Arc<Window>, app_vars: &mut AppVariables
         let mut pitch_two = app_vars.mixer.get_pitch_two();
         ui.add(egui::Slider::new(&mut pitch_two, 0.92..=1.08).text("PITCH TWO"));
         app_vars.mixer.set_pitch_two(pitch_two);
-
     });
 
     if app_vars.show_debug_panel {
