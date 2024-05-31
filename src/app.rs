@@ -264,6 +264,24 @@ fn run_ui(ctx: &egui::Context, window: &Arc<Window>, app_vars: &mut AppVariables
     theme_visuals.extreme_bg_color = theme_visuals.widgets.inactive.weak_bg_fill;
     ctx.set_visuals(theme_visuals.clone());
 
+    let dropped_files = ctx.input(|i| i.raw.dropped_files.clone());
+    if !dropped_files.is_empty() {
+        match app_vars.mixer_focus {
+            MixerFocus::ChOne => app_vars.mixer.load_ch_one(
+                dropped_files[0]
+                    .path
+                    .as_ref()
+                    .expect("Cannot get file path from drag and drop"),
+            ),
+            MixerFocus::ChTwo => app_vars.mixer.load_ch_two(
+                dropped_files[0]
+                    .path
+                    .as_ref()
+                    .expect("Cannot get file path from drag and drop"),
+            ),
+        }
+    }
+
     egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
         ui.label("Top Panel");
     });

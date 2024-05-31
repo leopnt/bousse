@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, path::PathBuf};
 
 use kira::{
     manager::{AudioManager, AudioManagerSettings, DefaultBackend},
@@ -24,7 +24,7 @@ pub enum ChState {
 }
 
 pub struct Mixer {
-    _audio_manager: AudioManager,
+    audio_manager: AudioManager,
 
     master_track: TrackHandle,
     cue_track: TrackHandle,
@@ -96,7 +96,7 @@ impl Mixer {
             .unwrap();
 
         Self {
-            _audio_manager: manager,
+            audio_manager: manager,
             master_track: master,
             cue_track: cue,
             cue_mix_value: 0.5,
@@ -120,6 +120,34 @@ impl Mixer {
             pitch_two: 1.0,
             ch_two_state: ChState::Playing,
             ch_two_control: ChControl::Untouched,
+        }
+    }
+
+    pub fn load_ch_one(&mut self, path: &PathBuf) {
+        match StaticSoundData::from_file(path) {
+            Ok(sound_one_origin) => {
+                let settings = StaticSoundSettings::new().output_destination(&self.ch_one_track);
+                self.sound_one.stop(Tween::default());
+                self.sound_one = self
+                    .audio_manager
+                    .play(sound_one_origin.with_settings(settings))
+                    .unwrap();
+            }
+            Err(e) => eprintln!("Failed to open {:?}: {:?}", path, e),
+        }
+    }
+
+    pub fn load_ch_two(&mut self, path: &PathBuf) {
+        match StaticSoundData::from_file(path) {
+            Ok(sound_two_origin) => {
+                let settings = StaticSoundSettings::new().output_destination(&self.ch_two_track);
+                self.sound_two.stop(Tween::default());
+                self.sound_two = self
+                    .audio_manager
+                    .play(sound_two_origin.with_settings(settings))
+                    .unwrap();
+            }
+            Err(e) => eprintln!("Failed to open {:?}: {:?}", path, e),
         }
     }
 
