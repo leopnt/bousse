@@ -142,11 +142,11 @@ impl Mixer {
     }
 
     pub fn get_duration_one(&self) -> f64 {
-        self.sound_one_origin.duration().as_secs_f64() / self.pitch_one
+        self.sound_one_origin.duration().as_secs_f64()
     }
 
     pub fn get_duration_two(&self) -> f64 {
-        self.sound_two_origin.duration().as_secs_f64() / self.pitch_two
+        self.sound_two_origin.duration().as_secs_f64()
     }
 
     pub fn get_position_one(&self) -> f64 {
@@ -162,18 +162,26 @@ impl Mixer {
     }
 
     pub fn get_pitch_one(&self) -> f64 {
-        self.pitch_one_target
-    }
-
-    pub fn set_pitch_one(&mut self, pitch: f64) {
-        self.pitch_one_target = pitch;
+        self.pitch_one
     }
 
     pub fn get_pitch_two(&self) -> f64 {
+        self.pitch_two
+    }
+
+    pub fn get_pitch_one_target(&self) -> f64 {
+        self.pitch_one_target
+    }
+
+    pub fn set_pitch_one_target(&mut self, pitch: f64) {
+        self.pitch_one_target = pitch;
+    }
+
+    pub fn get_pitch_two_target(&self) -> f64 {
         self.pitch_two_target
     }
 
-    pub fn set_pitch_two(&mut self, pitch: f64) {
+    pub fn set_pitch_two_target(&mut self, pitch: f64) {
         self.pitch_two_target = pitch;
     }
 

@@ -2,7 +2,7 @@ use std::env;
 use std::sync::Arc;
 use std::time::Duration;
 
-use egui::Color32;
+use egui::{Rounding, Visuals};
 use egui_wgpu::ScreenDescriptor;
 use winit::event::{DeviceEvent, ElementState, KeyEvent, Modifiers, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget};
@@ -211,77 +211,140 @@ impl App {
 }
 
 fn run_ui(ctx: &egui::Context, window: &Arc<Window>, app_vars: &mut AppVariables) {
+    let mut theme_visuals = Visuals::light();
+    theme_visuals.extreme_bg_color = theme_visuals.widgets.inactive.weak_bg_fill;
+    ctx.set_visuals(theme_visuals.clone());
+
+    egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
+        ui.label("Top Panel");
+    });
+
     egui::CentralPanel::default().show(ctx, |ui| {
-        if ui
-            .add(
-                egui::Button::new("ChOne").fill(if app_vars.mixer_focus == MixerFocus::ChOne {
-                    Color32::from_rgb(200, 100, 100)
-                } else {
-                    Color32::from_rgb(100, 100, 100)
-                }),
-            )
-            .clicked()
-        {
-            app_vars.mixer_focus = MixerFocus::ChOne;
-        }
-
-        // Button for ChTwo
-        if ui
-            .add(
-                egui::Button::new("ChTwo").fill(if app_vars.mixer_focus == MixerFocus::ChTwo {
-                    Color32::from_rgb(100, 100, 200)
-                } else {
-                    Color32::from_rgb(100, 100, 100)
-                }),
-            )
-            .clicked()
-        {
-            app_vars.mixer_focus = MixerFocus::ChTwo;
-        }
-
-        let mut cue_one = app_vars.mixer.is_cue_one_enabled();
-        ui.toggle_value(&mut cue_one, "Cue ONE");
-        app_vars.mixer.set_cue_one(cue_one);
-
-        let mut cue_two = app_vars.mixer.is_cue_two_enabled();
-        ui.toggle_value(&mut cue_two, "Cue TWO");
-        app_vars.mixer.set_cue_two(cue_two);
-
         let mut cue_mix = app_vars.mixer.get_cue_mix_value();
         ui.add(egui::Slider::new(&mut cue_mix, 0.0..=1.0).text("Cue Mix"));
         app_vars.mixer.set_cue_mix_value(cue_mix);
 
-        let mut ch_one = app_vars.mixer.get_ch_one_volume();
-        ui.add(egui::Slider::new(&mut ch_one, 0.0..=1.0).text("Ch ONE"));
-        app_vars.mixer.set_ch_one_volume(ch_one);
+        ui.separator();
 
-        let mut pitch_one = app_vars.mixer.get_pitch_one();
-        ui.add(egui::Slider::new(&mut pitch_one, 0.92..=1.08).text("PITCH ONE"));
-        app_vars.mixer.set_pitch_one(pitch_one);
+        ui.columns(2, |cols| {
+            cols[0].vertical_centered_justified(|ui| {
+                let position_one = app_vars.mixer.get_position_one();
+                let duration_one = app_vars.mixer.get_duration_one();
+                let pitch_one = app_vars.mixer.get_pitch_one();
+                ui.add(
+                    egui::ProgressBar::new((position_one / duration_one) as f32)
+                        .text(format!(
+                            "{} / {}",
+                            to_min_sec_millis_str(position_one),
+                            to_min_sec_millis_str(duration_one / pitch_one)
+                        ))
+                        .rounding(Rounding::default()),
+                );
 
-        let mut ch_two = app_vars.mixer.get_ch_two_volume();
-        ui.add(egui::Slider::new(&mut ch_two, 0.0..=1.0).text("Ch TWO"));
-        app_vars.mixer.set_ch_two_volume(ch_two);
+                ui.horizontal(|ui| {
+                    let mut ch_one = app_vars.mixer.get_ch_one_volume();
+                    ui.add(
+                        egui::Slider::new(&mut ch_one, 0.0..=1.0)
+                            .text("Ch ONE")
+                            .vertical(),
+                    );
+                    app_vars.mixer.set_ch_one_volume(ch_one);
 
-        let mut pitch_two = app_vars.mixer.get_pitch_two();
-        ui.add(egui::Slider::new(&mut pitch_two, 0.92..=1.08).text("PITCH TWO"));
-        app_vars.mixer.set_pitch_two(pitch_two);
+                    let mut pitch_one = app_vars.mixer.get_pitch_one_target();
+                    ui.add(
+                        egui::Slider::new(&mut pitch_one, 1.08..=0.92)
+                            .text("PITCH ONE")
+                            .vertical(),
+                    );
+                    app_vars.mixer.set_pitch_one_target(pitch_one);
+                });
 
-        let position_one = app_vars.mixer.get_position_one();
-        let duration_one = app_vars.mixer.get_duration_one();
-        ui.label(format!(
-            "Track One: {} / {}",
-            to_min_sec_millis_str(position_one),
-            to_min_sec_millis_str(duration_one)
-        ));
+                let mut cue_one = app_vars.mixer.is_cue_one_enabled();
+                if ui
+                    .add(egui::Button::new("Cue").fill(if cue_one {
+                        egui::Color32::LIGHT_BLUE
+                    } else {
+                        theme_visuals.widgets.inactive.weak_bg_fill
+                    }))
+                    .clicked()
+                {
+                    cue_one = !cue_one;
+                }
+                app_vars.mixer.set_cue_one(cue_one);
 
-        let position_two = app_vars.mixer.get_position_two();
-        let duration_two = app_vars.mixer.get_duration_two();
-        ui.label(format!(
-            "Track Two: {} / {}",
-            to_min_sec_millis_str(position_two),
-            to_min_sec_millis_str(duration_two)
-        ));
+                if ui
+                    .add(egui::Button::new("Focus ChOne").fill(
+                        if app_vars.mixer_focus == MixerFocus::ChOne {
+                            egui::Color32::from_rgb(170, 170, 255)
+                        } else {
+                            theme_visuals.widgets.inactive.weak_bg_fill
+                        },
+                    ))
+                    .clicked()
+                {
+                    app_vars.mixer_focus = MixerFocus::ChOne;
+                }
+            });
+
+            cols[1].vertical_centered_justified(|ui| {
+                let position_two = app_vars.mixer.get_position_two();
+                let duration_two = app_vars.mixer.get_duration_two();
+                let pitch_two = app_vars.mixer.get_pitch_two();
+                ui.add(
+                    egui::ProgressBar::new((position_two / duration_two) as f32)
+                        .text(format!(
+                            "{} / {}",
+                            to_min_sec_millis_str(position_two),
+                            to_min_sec_millis_str(duration_two / pitch_two)
+                        ))
+                        .rounding(Rounding::default()),
+                );
+
+                ui.horizontal(|ui| {
+                    let mut ch_two = app_vars.mixer.get_ch_two_volume();
+                    ui.add(
+                        egui::Slider::new(&mut ch_two, 0.0..=1.0)
+                            .text("Ch TWO")
+                            .vertical(),
+                    );
+                    app_vars.mixer.set_ch_two_volume(ch_two);
+
+                    let mut pitch_two = app_vars.mixer.get_pitch_two_target();
+                    ui.add(
+                        egui::Slider::new(&mut pitch_two, 1.08..=0.92)
+                            .text("PITCH TWO")
+                            .vertical(),
+                    );
+                    app_vars.mixer.set_pitch_two_target(pitch_two);
+                });
+
+                let mut cue_two = app_vars.mixer.is_cue_two_enabled();
+                if ui
+                    .add(egui::Button::new("Cue").fill(if cue_two {
+                        egui::Color32::LIGHT_BLUE
+                    } else {
+                        theme_visuals.widgets.inactive.weak_bg_fill
+                    }))
+                    .clicked()
+                {
+                    cue_two = !cue_two;
+                }
+                app_vars.mixer.set_cue_two(cue_two);
+
+                if ui
+                    .add(egui::Button::new("Focus ChTwo").fill(
+                        if app_vars.mixer_focus == MixerFocus::ChTwo {
+                            egui::Color32::from_rgb(170, 170, 255)
+                        } else {
+                            theme_visuals.widgets.inactive.weak_bg_fill
+                        },
+                    ))
+                    .clicked()
+                {
+                    app_vars.mixer_focus = MixerFocus::ChTwo;
+                }
+            });
+        });
     });
 
     if app_vars.show_debug_panel {
