@@ -11,7 +11,7 @@ use winit::window::{CursorGrabMode, Window, WindowBuilder};
 
 use crate::gpu::Gpu;
 use crate::gui::Gui;
-use crate::mixer::Mixer;
+use crate::mixer::{ChControl, Mixer};
 use crate::utils::to_min_sec_millis_str;
 
 #[derive(PartialEq)]
@@ -154,11 +154,66 @@ impl App {
     pub fn on_modifiers_key_changed(&mut self, modifiers: Modifiers) {
         self.app_vars.modifiers_key = modifiers;
 
-        match self.app_vars.modifiers_key.state() {
-            ModifiersState::ALT => {
-                self.window.set_cursor_grab(CursorGrabMode::Locked).unwrap();
+        match self.app_vars.mixer_focus {
+            MixerFocus::ChOne => {
+                match self.app_vars.modifiers_key.state().bits() {
+                    0x100 => {
+                        self.app_vars
+                            .mixer
+                            .set_ch_one_control_state(ChControl::SoftTouching);
+                        self.window.set_cursor_grab(CursorGrabMode::Locked).unwrap();
+                    } // ALT
+                    0x800 => {
+                        self.app_vars
+                            .mixer
+                            .set_ch_one_control_state(ChControl::Seeking);
+                        self.window.set_cursor_grab(CursorGrabMode::Locked).unwrap();
+                    } // SUPER
+                    0x900 => {
+                        self.app_vars
+                            .mixer
+                            .set_ch_one_control_state(ChControl::Cueing);
+                        self.window.set_cursor_grab(CursorGrabMode::Locked).unwrap();
+                    } // ALT | SUPER
+                    0x0 => {
+                        self.app_vars
+                            .mixer
+                            .set_ch_one_control_state(ChControl::Untouched);
+                        self.window.set_cursor_grab(CursorGrabMode::None).unwrap();
+                    }
+                    _ => (),
+                }
             }
-            _ => self.window.set_cursor_grab(CursorGrabMode::None).unwrap(),
+
+            MixerFocus::ChTwo => {
+                match self.app_vars.modifiers_key.state().bits() {
+                    0x100 => {
+                        self.app_vars
+                            .mixer
+                            .set_ch_two_control_state(ChControl::SoftTouching);
+                        self.window.set_cursor_grab(CursorGrabMode::Locked).unwrap();
+                    } // ALT
+                    0x800 => {
+                        self.app_vars
+                            .mixer
+                            .set_ch_two_control_state(ChControl::Seeking);
+                        self.window.set_cursor_grab(CursorGrabMode::Locked).unwrap();
+                    } // SUPER
+                    0x900 => {
+                        self.app_vars
+                            .mixer
+                            .set_ch_two_control_state(ChControl::Cueing);
+                        self.window.set_cursor_grab(CursorGrabMode::Locked).unwrap();
+                    } // ALT | SUPER
+                    0x0 => {
+                        self.app_vars
+                            .mixer
+                            .set_ch_two_control_state(ChControl::Untouched);
+                        self.window.set_cursor_grab(CursorGrabMode::None).unwrap();
+                    }
+                    _ => (),
+                }
+            }
         }
     }
 
@@ -184,20 +239,14 @@ impl App {
 
     pub fn on_device_event(&mut self, event: DeviceEvent) {
         match event {
-            DeviceEvent::MouseMotion { delta } => {
-                match (
-                    &self.app_vars.mixer_focus,
-                    self.app_vars.modifiers_key.state(),
-                ) {
-                    (MixerFocus::ChOne, ModifiersState::ALT) => {
-                        self.app_vars.mixer.soft_touch_one(delta.1 / 1000.0);
-                    }
-                    (MixerFocus::ChTwo, ModifiersState::ALT) => {
-                        self.app_vars.mixer.soft_touch_two(delta.1 / 1000.0);
-                    }
-                    _ => (),
+            DeviceEvent::MouseMotion { delta } => match &self.app_vars.mixer_focus {
+                MixerFocus::ChOne => {
+                    self.app_vars.mixer.touch_one(delta.1 / 1000.0);
                 }
-            }
+                MixerFocus::ChTwo => {
+                    self.app_vars.mixer.touch_two(delta.1 / 1000.0);
+                }
+            },
             _ => (),
         }
     }
@@ -284,6 +333,10 @@ fn run_ui(ctx: &egui::Context, window: &Arc<Window>, app_vars: &mut AppVariables
                 {
                     app_vars.mixer_focus = MixerFocus::ChOne;
                 }
+
+                if ui.add(egui::Button::new("START-STOP")).clicked() {
+                    app_vars.mixer.toggle_start_stop_one();
+                }
             });
 
             cols[1].vertical_centered_justified(|ui| {
@@ -342,6 +395,10 @@ fn run_ui(ctx: &egui::Context, window: &Arc<Window>, app_vars: &mut AppVariables
                     .clicked()
                 {
                     app_vars.mixer_focus = MixerFocus::ChTwo;
+                }
+
+                if ui.add(egui::Button::new("START-STOP")).clicked() {
+                    app_vars.mixer.toggle_start_stop_two();
                 }
             });
         });

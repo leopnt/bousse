@@ -9,6 +9,20 @@ use kira::{
 
 use crate::utils::lerp;
 
+#[derive(Clone, Copy)]
+pub enum ChControl {
+    Untouched,
+    SoftTouching,
+    Cueing,
+    Seeking,
+}
+
+#[derive(Clone, Copy)]
+pub enum ChState {
+    Playing,
+    Paused,
+}
+
 pub struct Mixer {
     _audio_manager: AudioManager,
 
@@ -23,6 +37,8 @@ pub struct Mixer {
     ch_one_volume: f64,
     pitch_one_target: f64,
     pitch_one: f64,
+    ch_one_state: ChState,
+    ch_one_control: ChControl,
 
     ch_two_track: TrackHandle,
     sound_two_origin: StaticSoundData,
@@ -31,6 +47,8 @@ pub struct Mixer {
     ch_two_volume: f64,
     pitch_two_target: f64,
     pitch_two: f64,
+    ch_two_state: ChState,
+    ch_two_control: ChControl,
 }
 
 impl Mixer {
@@ -90,6 +108,8 @@ impl Mixer {
             ch_one_volume: 0.0,
             pitch_one_target: 1.0,
             pitch_one: 1.0,
+            ch_one_state: ChState::Playing,
+            ch_one_control: ChControl::Untouched,
 
             sound_two_origin: sound_two_origin,
             sound_two: sound_two,
@@ -98,15 +118,45 @@ impl Mixer {
             ch_two_volume: 0.0,
             pitch_two_target: 1.0,
             pitch_two: 1.0,
+            ch_two_state: ChState::Playing,
+            ch_two_control: ChControl::Untouched,
         }
     }
 
     pub fn process(&mut self) {
-        self.pitch_one = lerp(self.pitch_one, self.pitch_one_target, 0.2);
+        match (self.ch_one_state, self.ch_one_control) {
+            (_, ChControl::Cueing) => {
+                self.pitch_one = lerp(self.pitch_one, 0.0, 0.3);
+            }
+            (_, ChControl::Seeking) => {
+                self.pitch_one = lerp(self.pitch_one, 0.0, 0.3);
+            }
+            (ChState::Playing, _) => {
+                self.pitch_one = lerp(self.pitch_one, self.pitch_one_target, 0.3);
+            }
+            (ChState::Paused, _) => {
+                self.pitch_one = lerp(self.pitch_one, 0.0, 0.3);
+            }
+        }
+
         self.sound_one
             .set_playback_rate(self.pitch_one, Tween::default());
 
-        self.pitch_two = lerp(self.pitch_two, self.pitch_two_target, 0.2);
+        match (self.ch_two_state, self.ch_two_control) {
+            (_, ChControl::Cueing) => {
+                self.pitch_two = lerp(self.pitch_two, 0.0, 0.3);
+            }
+            (_, ChControl::Seeking) => {
+                self.pitch_two = lerp(self.pitch_two, 0.0, 0.3);
+            }
+            (ChState::Playing, _) => {
+                self.pitch_two = lerp(self.pitch_two, self.pitch_two_target, 0.3);
+            }
+            (ChState::Paused, _) => {
+                self.pitch_two = lerp(self.pitch_two, 0.0, 0.3);
+            }
+        }
+
         self.sound_two
             .set_playback_rate(self.pitch_two, Tween::default());
     }
@@ -139,6 +189,28 @@ impl Mixer {
                 Tween::default(),
             )
             .unwrap();
+    }
+
+    pub fn toggle_start_stop_one(&mut self) {
+        match &mut self.ch_one_state {
+            ChState::Paused => self.ch_one_state = ChState::Playing,
+            ChState::Playing => self.ch_one_state = ChState::Paused,
+        }
+    }
+
+    pub fn toggle_start_stop_two(&mut self) {
+        match &mut self.ch_two_state {
+            ChState::Paused => self.ch_two_state = ChState::Playing,
+            ChState::Playing => self.ch_two_state = ChState::Paused,
+        }
+    }
+
+    pub fn set_ch_one_control_state(&mut self, control_state: ChControl) {
+        self.ch_one_control = control_state;
+    }
+
+    pub fn set_ch_two_control_state(&mut self, control_state: ChControl) {
+        self.ch_two_control = control_state;
     }
 
     pub fn get_duration_one(&self) -> f64 {
@@ -209,14 +281,38 @@ impl Mixer {
             .unwrap();
     }
 
-    pub fn soft_touch_one(&mut self, force: f64) {
-        let force = force.clamp(-1.0, 1.0);
-        self.pitch_one = self.pitch_one - force;
+    pub fn touch_one(&mut self, force: f64) {
+        match self.ch_one_control {
+            ChControl::SoftTouching => {
+                self.pitch_one = self.pitch_one - force;
+            }
+            ChControl::Cueing => {
+                // compensate for mouse acceleration profile by applying powf with a number in [0, 1]
+                // this an empirical approximation / hack
+                self.pitch_one = self.pitch_one - 10.0 * force.signum() * force.abs().powf(0.65);
+            }
+            ChControl::Seeking => {
+                self.pitch_one = self.pitch_one - 400.0 * force;
+            }
+            ChControl::Untouched => (),
+        }
     }
 
-    pub fn soft_touch_two(&mut self, force: f64) {
-        let force = force.clamp(-1.0, 1.0);
-        self.pitch_two = self.pitch_two - force;
+    pub fn touch_two(&mut self, force: f64) {
+        match self.ch_two_control {
+            ChControl::SoftTouching => {
+                self.pitch_two = self.pitch_two - force;
+            }
+            ChControl::Cueing => {
+                // compensate for mouse acceleration profile by applying powf with a number in [0, 1]
+                // this an empirical approximation / hack
+                self.pitch_two = self.pitch_two - 10.0 * force.signum() * force.abs().powf(0.65);
+            }
+            ChControl::Seeking => {
+                self.pitch_two = self.pitch_two - 400.0 * force;
+            }
+            ChControl::Untouched => (),
+        }
     }
 
     pub fn get_ch_two_volume(&self) -> f64 {

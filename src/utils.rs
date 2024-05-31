@@ -10,5 +10,9 @@ pub fn to_min_sec_millis_str(time_sec: f64) -> String {
     let seconds = integer_part % 60;
     let millis = (fractional_part * 1000.0).round();
 
+    if time_sec >= 60.0 * 60.0  {
+        return "INF".to_string();
+    }
+
     format!("{:02}:{:02}:{:03}", minutes, seconds, millis)
 }
