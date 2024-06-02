@@ -34,13 +34,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut start = Instant::now();
     event_loop.run(move |event, elwt| match event {
-        Event::AboutToWait => {
-            app.process(start.elapsed().as_secs_f64());
-            start = Instant::now();
-        }
         Event::DeviceEvent { event, .. } => app.on_device_event(event),
         Event::WindowEvent { event, .. } => app.on_window_event(event, elwt),
-        Event::NewEvents(StartCause::ResumeTimeReached { .. }) => app.on_resume_time_reached(elwt),
+        Event::NewEvents(StartCause::ResumeTimeReached { .. }) => {
+            app.process(start.elapsed().as_secs_f64());
+            start = Instant::now();
+            app.on_resume_time_reached(elwt)
+        }
         _ => (),
     })?;
 

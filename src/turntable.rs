@@ -136,13 +136,15 @@ impl Turntable {
 
 impl Processable for Turntable {
     fn process(&mut self, delta: f64) {
+        let force = self.force * 0.02 / delta;
+
         let pitch_per_state = match (self.is_playing, self.is_scratching) {
-            (false, false) => 0.0 + 0.01 * self.force,
-            (true, false) => self.pitch_target + 0.01 * self.force,
-            (_, true) => 0.1 * self.force,
+            (false, false) => 0.0 + 0.01 * force,
+            (true, false) => self.pitch_target + 0.01 * force,
+            (_, true) => 0.1 * force,
         };
 
-        self.pitch_true = lerp(self.pitch_true, pitch_per_state, 20.0 * delta);
+        self.pitch_true = lerp(self.pitch_true, pitch_per_state, 0.8 * 0.02 / delta);
 
         if let Some(sound) = &mut self.sound {
             sound.set_playback_rate(self.pitch_true, Tween::default());
