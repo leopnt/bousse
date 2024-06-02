@@ -7,33 +7,33 @@ use egui_wgpu::ScreenDescriptor;
 use winit::event::{DeviceEvent, ElementState, KeyEvent, Modifiers, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget};
 use winit::keyboard::{KeyCode, ModifiersState, PhysicalKey};
-use winit::window::{CursorGrabMode, Window, WindowBuilder};
+use winit::window::{Window, WindowBuilder};
 
+use crate::controller::{BoothEvent, Controller, TurntableFocus};
 use crate::gpu::Gpu;
 use crate::gui::Gui;
-use crate::mixer::{ChControl, Mixer};
+use crate::mixer::Mixer;
+use crate::processable::Processable;
+use crate::turntable::Turntable;
 use crate::utils::to_min_sec_millis_str;
 
-#[derive(PartialEq)]
-pub enum MixerFocus {
-    ChOne,
-    ChTwo,
-}
-
-pub struct AppVariables {
+pub struct AppData {
     pub fps: u8,
     pub frame_counter: u32,
     pub show_debug_panel: bool,
-    pub modifiers_key: Modifiers,
     pub mixer: Mixer,
-    pub mixer_focus: MixerFocus,
+    pub turntable_one: Turntable,
+    pub turntable_two: Turntable,
+    pub turntable_focus: TurntableFocus,
+    pub modifiers_key: Modifiers,
 }
 
 pub struct App {
     pub window: Arc<Window>,
     pub gpu: Gpu,
     pub gui: Gui,
-    pub app_vars: AppVariables,
+    pub app_data: AppData,
+    pub controller: Controller,
 }
 
 impl App {
@@ -53,21 +53,28 @@ impl App {
         let gui = Gui::new(&window, &gpu);
 
         let mixer = Mixer::new();
+        let audio_manager_clone_one = mixer.get_audio_manager();
+        let audio_manager_clone_two = mixer.get_audio_manager();
+        let ch_one_track_clone = mixer.get_ch_one_track();
+        let ch_two_track_clone = mixer.get_ch_two_track();
 
-        let app_vars = AppVariables {
+        let app_data = AppData {
             fps: 24,
             frame_counter: 0,
-            show_debug_panel: false,
-            modifiers_key: Modifiers::default(),
+            show_debug_panel: true,
             mixer: mixer,
-            mixer_focus: MixerFocus::ChOne,
+            turntable_one: Turntable::new(audio_manager_clone_one, ch_one_track_clone),
+            turntable_two: Turntable::new(audio_manager_clone_two, ch_two_track_clone),
+            turntable_focus: TurntableFocus::One,
+            modifiers_key: Modifiers::default(),
         };
 
         Self {
             window: window,
             gpu: gpu,
             gui: gui,
-            app_vars: app_vars,
+            app_data: app_data,
+            controller: Controller::new(),
         }
     }
 
@@ -107,7 +114,7 @@ impl App {
             }
 
             WindowEvent::RedrawRequested => {
-                self.app_vars.frame_counter += 1;
+                self.app_data.frame_counter += 1;
 
                 let mut encoder = self.encoder();
                 let surface_texture = self.surface_texture();
@@ -120,7 +127,7 @@ impl App {
                     &self.window,
                     &surface_view,
                     self.screen_descriptor(),
-                    |ctx| run_ui(ctx, &self.window, &mut self.app_vars),
+                    |ctx| run_ui(ctx, &self.window, &mut self.app_data, &mut self.controller),
                 );
 
                 self.gpu.queue.submit(Some(encoder.finish()));
@@ -152,68 +159,15 @@ impl App {
     }
 
     pub fn on_modifiers_key_changed(&mut self, modifiers: Modifiers) {
-        self.app_vars.modifiers_key = modifiers;
+        self.app_data.modifiers_key = modifiers;
 
-        match self.app_vars.mixer_focus {
-            MixerFocus::ChOne => {
-                match self.app_vars.modifiers_key.state().bits() {
-                    0x100 => {
-                        self.app_vars
-                            .mixer
-                            .set_ch_one_control_state(ChControl::SoftTouching);
-                        self.window.set_cursor_grab(CursorGrabMode::Locked).unwrap();
-                    } // ALT
-                    0x800 => {
-                        self.app_vars
-                            .mixer
-                            .set_ch_one_control_state(ChControl::Seeking);
-                        self.window.set_cursor_grab(CursorGrabMode::Locked).unwrap();
-                    } // SUPER
-                    0x900 => {
-                        self.app_vars
-                            .mixer
-                            .set_ch_one_control_state(ChControl::Cueing);
-                        self.window.set_cursor_grab(CursorGrabMode::Locked).unwrap();
-                    } // ALT | SUPER
-                    0x0 => {
-                        self.app_vars
-                            .mixer
-                            .set_ch_one_control_state(ChControl::Untouched);
-                        self.window.set_cursor_grab(CursorGrabMode::None).unwrap();
-                    }
-                    _ => (),
-                }
-            }
-
-            MixerFocus::ChTwo => {
-                match self.app_vars.modifiers_key.state().bits() {
-                    0x100 => {
-                        self.app_vars
-                            .mixer
-                            .set_ch_two_control_state(ChControl::SoftTouching);
-                        self.window.set_cursor_grab(CursorGrabMode::Locked).unwrap();
-                    } // ALT
-                    0x800 => {
-                        self.app_vars
-                            .mixer
-                            .set_ch_two_control_state(ChControl::Seeking);
-                        self.window.set_cursor_grab(CursorGrabMode::Locked).unwrap();
-                    } // SUPER
-                    0x900 => {
-                        self.app_vars
-                            .mixer
-                            .set_ch_two_control_state(ChControl::Cueing);
-                        self.window.set_cursor_grab(CursorGrabMode::Locked).unwrap();
-                    } // ALT | SUPER
-                    0x0 => {
-                        self.app_vars
-                            .mixer
-                            .set_ch_two_control_state(ChControl::Untouched);
-                        self.window.set_cursor_grab(CursorGrabMode::None).unwrap();
-                    }
-                    _ => (),
-                }
-            }
+        match modifiers.state() {
+            ModifiersState::SUPER => self
+                .controller
+                .handle_event(&mut self.app_data, BoothEvent::ScratchBegin),
+            _ => self
+                .controller
+                .handle_event(&mut self.app_data, BoothEvent::ScratchEnd),
         }
     }
 
@@ -222,7 +176,7 @@ impl App {
             physical_key,
             state,
             repeat,
-            self.app_vars.modifiers_key.state(),
+            self.app_data.modifiers_key.state(),
         ) {
             (
                 PhysicalKey::Code(KeyCode::KeyD),
@@ -230,56 +184,58 @@ impl App {
                 false,
                 ModifiersState::CONTROL,
             ) => {
-                self.app_vars.show_debug_panel = !self.app_vars.show_debug_panel;
+                self.controller
+                    .handle_event(&mut self.app_data, BoothEvent::ToggleDebug);
             }
-
             _ => (),
         }
     }
 
     pub fn on_device_event(&mut self, event: DeviceEvent) {
-        match event {
-            DeviceEvent::MouseMotion { delta } => match &self.app_vars.mixer_focus {
-                MixerFocus::ChOne => {
-                    self.app_vars.mixer.touch_one(delta.1 / 1000.0);
-                }
-                MixerFocus::ChTwo => {
-                    self.app_vars.mixer.touch_two(delta.1 / 1000.0);
-                }
-            },
+        match (event, self.app_data.modifiers_key.state()) {
+            (DeviceEvent::MouseMotion { delta }, ModifiersState::ALT | ModifiersState::SUPER) => {
+                let dir = delta.1.signum();
+                let mag = delta.1.abs().powf(0.65); // apply pow to compensate for mouse acceleration / non linearity
+
+                self.controller
+                    .handle_event(&mut self.app_data, BoothEvent::ForceApplied(-dir * mag));
+            }
             _ => (),
         }
     }
 
     pub fn on_resume_time_reached(&self, elwt: &EventLoopWindowTarget<()>) {
         elwt.set_control_flow(ControlFlow::wait_duration(Duration::from_millis(
-            (1000 as f32 / self.app_vars.fps as f32) as u64,
+            (1000 as f32 / self.app_data.fps as f32) as u64,
         )));
         self.window.request_redraw();
     }
 }
 
-fn run_ui(ctx: &egui::Context, window: &Arc<Window>, app_vars: &mut AppVariables) {
+impl Processable for App {
+    fn process(&mut self, delta: f64) {
+        self.app_data.turntable_one.process(delta);
+        self.app_data.turntable_two.process(delta);
+    }
+}
+
+fn run_ui(
+    ctx: &egui::Context,
+    window: &Arc<Window>,
+    app_data: &mut AppData,
+    controller: &mut Controller,
+) {
     let mut theme_visuals = Visuals::light();
     theme_visuals.extreme_bg_color = theme_visuals.widgets.inactive.weak_bg_fill;
     ctx.set_visuals(theme_visuals.clone());
 
     let dropped_files = ctx.input(|i| i.raw.dropped_files.clone());
     if !dropped_files.is_empty() {
-        match app_vars.mixer_focus {
-            MixerFocus::ChOne => app_vars.mixer.load_ch_one(
-                dropped_files[0]
-                    .path
-                    .as_ref()
-                    .expect("Cannot get file path from drag and drop"),
-            ),
-            MixerFocus::ChTwo => app_vars.mixer.load_ch_two(
-                dropped_files[0]
-                    .path
-                    .as_ref()
-                    .expect("Cannot get file path from drag and drop"),
-            ),
-        }
+        let path = dropped_files[0]
+            .path
+            .as_ref()
+            .expect("Cannot get file path from drag and drop");
+        controller.handle_event(app_data, BoothEvent::TrackLoad(path));
     }
 
     egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -287,46 +243,52 @@ fn run_ui(ctx: &egui::Context, window: &Arc<Window>, app_vars: &mut AppVariables
     });
 
     egui::CentralPanel::default().show(ctx, |ui| {
-        let mut cue_mix = app_vars.mixer.get_cue_mix_value();
+        let mut cue_mix = app_data.mixer.get_cue_mix_value();
         ui.add(egui::Slider::new(&mut cue_mix, 0.0..=1.0).text("Cue Mix"));
-        app_vars.mixer.set_cue_mix_value(cue_mix);
+        controller.handle_event(app_data, BoothEvent::CueMixChanged(cue_mix));
 
         ui.separator();
 
         ui.columns(2, |cols| {
             cols[0].vertical_centered_justified(|ui| {
-                let position_one = app_vars.mixer.get_position_one();
-                let duration_one = app_vars.mixer.get_duration_one();
-                let pitch_one = app_vars.mixer.get_pitch_one();
+                let (position, duration, position_display, duration_display) = match (
+                    app_data.turntable_one.position(),
+                    app_data.turntable_one.duration(),
+                ) {
+                    (Some(position), Some(duration)) => (
+                        position,
+                        duration,
+                        to_min_sec_millis_str(position),
+                        to_min_sec_millis_str(duration),
+                    ),
+                    (_, _) => (0.0, 1.0, "NA".to_string(), "NA".to_string()),
+                };
+
                 ui.add(
-                    egui::ProgressBar::new((position_one / duration_one) as f32)
-                        .text(format!(
-                            "{} / {}",
-                            to_min_sec_millis_str(position_one),
-                            to_min_sec_millis_str(duration_one / pitch_one)
-                        ))
+                    egui::ProgressBar::new((position / duration) as f32)
+                        .text(format!("{} / {}", position_display, duration_display))
                         .rounding(Rounding::default()),
                 );
 
                 ui.horizontal(|ui| {
-                    let mut ch_one = app_vars.mixer.get_ch_one_volume();
+                    let mut ch_one = app_data.mixer.get_ch_one_volume();
                     ui.add(
                         egui::Slider::new(&mut ch_one, 0.0..=1.0)
                             .text("Ch ONE")
                             .vertical(),
                     );
-                    app_vars.mixer.set_ch_one_volume(ch_one);
+                    controller.handle_event(app_data, BoothEvent::VolumeOneChanged(ch_one));
 
-                    let mut pitch_one = app_vars.mixer.get_pitch_one_target();
+                    let mut pitch_one = app_data.turntable_one.pitch();
                     ui.add(
                         egui::Slider::new(&mut pitch_one, 1.08..=0.92)
                             .text("PITCH ONE")
                             .vertical(),
                     );
-                    app_vars.mixer.set_pitch_one_target(pitch_one);
+                    controller.handle_event(app_data, BoothEvent::PitchOneChanged(pitch_one));
                 });
 
-                let mut cue_one = app_vars.mixer.is_cue_one_enabled();
+                let cue_one = app_data.mixer.is_cue_one_enabled();
                 if ui
                     .add(egui::Button::new("Cue").fill(if cue_one {
                         egui::Color32::LIGHT_BLUE
@@ -335,61 +297,65 @@ fn run_ui(ctx: &egui::Context, window: &Arc<Window>, app_vars: &mut AppVariables
                     }))
                     .clicked()
                 {
-                    cue_one = !cue_one;
+                    controller.handle_event(app_data, BoothEvent::ToggleCueOne);
                 }
-                app_vars.mixer.set_cue_one(cue_one);
 
                 if ui
-                    .add(egui::Button::new("Focus ChOne").fill(
-                        if app_vars.mixer_focus == MixerFocus::ChOne {
-                            egui::Color32::from_rgb(170, 170, 255)
-                        } else {
-                            theme_visuals.widgets.inactive.weak_bg_fill
-                        },
-                    ))
+                    .add(
+                        egui::Button::new("Focus ChOne").fill(match app_data.turntable_focus {
+                            TurntableFocus::One => egui::Color32::from_rgb(170, 170, 255),
+                            _ => theme_visuals.widgets.inactive.weak_bg_fill,
+                        }),
+                    )
                     .clicked()
                 {
-                    app_vars.mixer_focus = MixerFocus::ChOne;
+                    controller
+                        .handle_event(app_data, BoothEvent::FocusChanged(TurntableFocus::One));
                 }
 
                 if ui.add(egui::Button::new("START-STOP")).clicked() {
-                    app_vars.mixer.toggle_start_stop_one();
+                    controller.handle_event(app_data, BoothEvent::ToggleStartStopOne);
                 }
             });
 
             cols[1].vertical_centered_justified(|ui| {
-                let position_two = app_vars.mixer.get_position_two();
-                let duration_two = app_vars.mixer.get_duration_two();
-                let pitch_two = app_vars.mixer.get_pitch_two();
+                let (position, duration, position_display, duration_display) = match (
+                    app_data.turntable_two.position(),
+                    app_data.turntable_two.duration(),
+                ) {
+                    (Some(position), Some(duration)) => (
+                        position,
+                        duration,
+                        to_min_sec_millis_str(position),
+                        to_min_sec_millis_str(duration),
+                    ),
+                    (_, _) => (0.0, 1.0, "NA".to_string(), "NA".to_string()),
+                };
                 ui.add(
-                    egui::ProgressBar::new((position_two / duration_two) as f32)
-                        .text(format!(
-                            "{} / {}",
-                            to_min_sec_millis_str(position_two),
-                            to_min_sec_millis_str(duration_two / pitch_two)
-                        ))
+                    egui::ProgressBar::new((position / duration) as f32)
+                        .text(format!("{} / {}", position_display, duration_display))
                         .rounding(Rounding::default()),
                 );
 
                 ui.horizontal(|ui| {
-                    let mut ch_two = app_vars.mixer.get_ch_two_volume();
+                    let mut ch_two = app_data.mixer.get_ch_two_volume();
                     ui.add(
                         egui::Slider::new(&mut ch_two, 0.0..=1.0)
                             .text("Ch TWO")
                             .vertical(),
                     );
-                    app_vars.mixer.set_ch_two_volume(ch_two);
+                    controller.handle_event(app_data, BoothEvent::VolumeTwoChanged(ch_two));
 
-                    let mut pitch_two = app_vars.mixer.get_pitch_two_target();
+                    let mut pitch_two = app_data.turntable_two.pitch();
                     ui.add(
                         egui::Slider::new(&mut pitch_two, 1.08..=0.92)
                             .text("PITCH TWO")
                             .vertical(),
                     );
-                    app_vars.mixer.set_pitch_two_target(pitch_two);
+                    controller.handle_event(app_data, BoothEvent::PitchTwoChanged(pitch_two));
                 });
 
-                let mut cue_two = app_vars.mixer.is_cue_two_enabled();
+                let cue_two = app_data.mixer.is_cue_two_enabled();
                 if ui
                     .add(egui::Button::new("Cue").fill(if cue_two {
                         egui::Color32::LIGHT_BLUE
@@ -398,36 +364,37 @@ fn run_ui(ctx: &egui::Context, window: &Arc<Window>, app_vars: &mut AppVariables
                     }))
                     .clicked()
                 {
-                    cue_two = !cue_two;
+                    controller.handle_event(app_data, BoothEvent::ToggleCueTwo);
                 }
-                app_vars.mixer.set_cue_two(cue_two);
 
                 if ui
-                    .add(egui::Button::new("Focus ChTwo").fill(
-                        if app_vars.mixer_focus == MixerFocus::ChTwo {
-                            egui::Color32::from_rgb(170, 170, 255)
-                        } else {
-                            theme_visuals.widgets.inactive.weak_bg_fill
-                        },
-                    ))
+                    .add(
+                        egui::Button::new("Focus ChTwo").fill(match app_data.turntable_focus {
+                            TurntableFocus::Two => egui::Color32::from_rgb(170, 170, 255),
+                            _ => theme_visuals.widgets.inactive.weak_bg_fill,
+                        }),
+                    )
                     .clicked()
                 {
-                    app_vars.mixer_focus = MixerFocus::ChTwo;
+                    controller
+                        .handle_event(app_data, BoothEvent::FocusChanged(TurntableFocus::Two));
                 }
 
                 if ui.add(egui::Button::new("START-STOP")).clicked() {
-                    app_vars.mixer.toggle_start_stop_two();
+                    controller.handle_event(app_data, BoothEvent::ToggleStartStopTwo);
                 }
             });
         });
     });
 
-    if app_vars.show_debug_panel {
+    if app_data.show_debug_panel {
         egui::TopBottomPanel::bottom("debug_panel").show(ctx, |ui| {
             ui.label("Debug Panel");
             ui.separator();
-            ui.label(format!("frame_counter: {}", app_vars.frame_counter));
+            ui.label(format!("frame_counter: {}", app_data.frame_counter));
+            ui.label(format!("focus: {:?}", app_data.turntable_focus));
             ui.label(format!("window_size: {:?}", window.inner_size()));
+            ui.label(format!("modifiers_key: {:?}", app_data.modifiers_key));
         });
     }
 }
