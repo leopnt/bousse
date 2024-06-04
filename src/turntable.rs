@@ -136,6 +136,15 @@ impl Turntable {
     pub fn apply_force(&mut self, force: f64) {
         self.force += force;
     }
+
+    pub fn seek(&mut self, percent: f32) {
+        let duration = self.duration().unwrap(); // TODO: output a result
+
+        self.sound
+            .as_mut()
+            .unwrap()
+            .seek_to((percent * duration as f32) as f64);
+    }
 }
 
 impl Processable for Turntable {

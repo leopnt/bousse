@@ -273,11 +273,23 @@ fn run_ui(
                     (_, _) => (0.0, 1.0, "NA".to_string(), "NA".to_string()),
                 };
 
-                ui.add(
+                let progress_bar = ui.add(
                     egui::ProgressBar::new((position / duration) as f32)
                         .text(format!("{} / {}", position_display, duration_display))
                         .rounding(Rounding::default()),
                 );
+
+                if let Some(click_position) = progress_bar
+                    .interact(egui::Sense::click())
+                    .interact_pointer_pos()
+                {
+                    let relative_x = click_position.x - progress_bar.interact_rect.left();
+                    let relative_percent = relative_x / progress_bar.interact_rect.width();
+                    controller.handle_event(app_data, BoothEvent::SeekOne(relative_percent));
+                }
+
+                let mut position = position.clone();
+                ui.add(egui::Slider::new(&mut position, 0.0..=duration).show_value(false));
 
                 ui.horizontal(|ui| {
                     let mut ch_one = app_data.mixer.get_ch_one_volume();

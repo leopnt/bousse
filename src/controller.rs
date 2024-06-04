@@ -25,6 +25,7 @@ pub enum BoothEvent<'a> {
     VolumeTwoChanged(f64),
     PitchOneChanged(f64),
     PitchTwoChanged(f64),
+    SeekOne(f32),
 }
 
 pub struct Controller {}
@@ -45,12 +46,8 @@ impl Controller {
             (BoothEvent::TrackLoad(path), TurntableFocus::Two) => {
                 app_data.turntable_two.load(path).unwrap()
             }
-            (BoothEvent::ToggleStartStopOne, _) => {
-                app_data.turntable_one.toggle_start_stop()
-            }
-            (BoothEvent::ToggleStartStopTwo, _) => {
-                app_data.turntable_two.toggle_start_stop()
-            }
+            (BoothEvent::ToggleStartStopOne, _) => app_data.turntable_one.toggle_start_stop(),
+            (BoothEvent::ToggleStartStopTwo, _) => app_data.turntable_two.toggle_start_stop(),
             (BoothEvent::ToggleCueOne, _) => {
                 let cue = app_data.mixer.is_cue_one_enabled();
                 app_data.mixer.set_cue_one(!cue);
@@ -88,6 +85,9 @@ impl Controller {
             }
             (BoothEvent::ForceApplied(force), TurntableFocus::Two) => {
                 app_data.turntable_two.apply_force(*force);
+            }
+            (BoothEvent::SeekOne(percent), _) => {
+                app_data.turntable_one.seek(*percent);
             }
         }
     }
