@@ -1,6 +1,6 @@
 use std::env;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use egui::{Rounding, Visuals};
 use egui_wgpu::ScreenDescriptor;
@@ -34,6 +34,7 @@ pub struct App {
     pub gui: Gui,
     pub app_data: AppData,
     pub controller: Controller,
+    pub delta_timer: Instant,
 }
 
 impl App {
@@ -75,6 +76,7 @@ impl App {
             gui: gui,
             app_data: app_data,
             controller: Controller::new(),
+            delta_timer: Instant::now(),
         }
     }
 
@@ -204,11 +206,18 @@ impl App {
         }
     }
 
-    pub fn on_resume_time_reached(&self, elwt: &EventLoopWindowTarget<()>) {
+    pub fn on_resume_time_reached(&mut self, elwt: &EventLoopWindowTarget<()>) {
+        self.process(self.delta_timer.elapsed().as_secs_f64());
+        self.delta_timer = Instant::now();
+
         elwt.set_control_flow(ControlFlow::wait_duration(Duration::from_millis(
             (1000 as f32 / self.app_data.fps as f32) as u64,
         )));
         self.window.request_redraw();
+    }
+
+    pub fn on_midi_event(&mut self, message: &[u8]) {
+        println!("App received midi message: {:?}", message);
     }
 }
 

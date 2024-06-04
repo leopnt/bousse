@@ -1,4 +1,7 @@
-use std::{cell::RefCell, path::Path, rc::Rc};
+use std::{
+    path::Path,
+    sync::{Arc, Mutex},
+};
 
 use kira::{
     manager::{error::PlaySoundError, AudioManager},
@@ -16,8 +19,8 @@ use crate::{processable::Processable, utils::lerp};
 pub struct Turntable {
     sound_data: Option<StaticSoundData>,
     sound: Option<StaticSoundHandle>,
-    audio_manager: Rc<RefCell<AudioManager>>,
-    output_destination: Rc<RefCell<TrackHandle>>,
+    audio_manager: Arc<Mutex<AudioManager>>,
+    output_destination: Arc<Mutex<TrackHandle>>,
     /// the virtual speed of the vinyl
     pitch_true: f64,
     /// the virtual speed of the platter
@@ -49,8 +52,8 @@ impl From<PlaySoundError<()>> for LoadError {
 impl Turntable {
     /// Creates a new instance of a turntable
     pub fn new(
-        audio_manager: Rc<RefCell<AudioManager>>,
-        output_destination: Rc<RefCell<TrackHandle>>,
+        audio_manager: Arc<Mutex<AudioManager>>,
+        output_destination: Arc<Mutex<TrackHandle>>,
     ) -> Self {
         Self {
             sound_data: None,
@@ -76,13 +79,14 @@ impl Turntable {
             sound.stop(Tween::default());
         }
 
-        let settings =
-            StaticSoundSettings::new().output_destination(&*self.output_destination.borrow());
+        let settings = StaticSoundSettings::new()
+            .output_destination(&*self.output_destination.lock().unwrap());
 
         if let Some(sound_data) = &mut self.sound_data {
             self.sound = match self
                 .audio_manager
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .play(sound_data.with_settings(settings))
             {
                 Ok(sound) => Some(sound),
@@ -167,13 +171,14 @@ mod tests {
 
     #[test]
     fn test_load() {
-        let audio_manager = Rc::new(RefCell::new(
+        let audio_manager = Arc::new(Mutex::new(
             AudioManager::<DefaultBackend>::new(AudioManagerSettings::default()).unwrap(),
         ));
 
-        let track = Rc::new(RefCell::new(
+        let track = Arc::new(Mutex::new(
             audio_manager
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .add_sub_track(TrackBuilder::new())
                 .unwrap(),
         ));
@@ -187,13 +192,14 @@ mod tests {
 
     #[test]
     fn test_duration() {
-        let audio_manager = Rc::new(RefCell::new(
+        let audio_manager = Arc::new(Mutex::new(
             AudioManager::<DefaultBackend>::new(AudioManagerSettings::default()).unwrap(),
         ));
 
-        let track = Rc::new(RefCell::new(
+        let track = Arc::new(Mutex::new(
             audio_manager
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .add_sub_track(TrackBuilder::new())
                 .unwrap(),
         ));
@@ -207,13 +213,14 @@ mod tests {
 
     #[test]
     fn test_position() {
-        let audio_manager = Rc::new(RefCell::new(
+        let audio_manager = Arc::new(Mutex::new(
             AudioManager::<DefaultBackend>::new(AudioManagerSettings::default()).unwrap(),
         ));
 
-        let track = Rc::new(RefCell::new(
+        let track = Arc::new(Mutex::new(
             audio_manager
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .add_sub_track(TrackBuilder::new())
                 .unwrap(),
         ));
@@ -227,13 +234,14 @@ mod tests {
 
     #[test]
     fn test_start_scratching() {
-        let audio_manager = Rc::new(RefCell::new(
+        let audio_manager = Arc::new(Mutex::new(
             AudioManager::<DefaultBackend>::new(AudioManagerSettings::default()).unwrap(),
         ));
 
-        let track = Rc::new(RefCell::new(
+        let track = Arc::new(Mutex::new(
             audio_manager
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .add_sub_track(TrackBuilder::new())
                 .unwrap(),
         ));
@@ -246,13 +254,14 @@ mod tests {
 
     #[test]
     fn test_toggle_start_stop() {
-        let audio_manager = Rc::new(RefCell::new(
+        let audio_manager = Arc::new(Mutex::new(
             AudioManager::<DefaultBackend>::new(AudioManagerSettings::default()).unwrap(),
         ));
 
-        let track = Rc::new(RefCell::new(
+        let track = Arc::new(Mutex::new(
             audio_manager
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .add_sub_track(TrackBuilder::new())
                 .unwrap(),
         ));
@@ -269,13 +278,14 @@ mod tests {
 
     #[test]
     fn test_end_scratching() {
-        let audio_manager = Rc::new(RefCell::new(
+        let audio_manager = Arc::new(Mutex::new(
             AudioManager::<DefaultBackend>::new(AudioManagerSettings::default()).unwrap(),
         ));
 
-        let track = Rc::new(RefCell::new(
+        let track = Arc::new(Mutex::new(
             audio_manager
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .add_sub_track(TrackBuilder::new())
                 .unwrap(),
         ));
@@ -288,13 +298,14 @@ mod tests {
 
     #[test]
     fn test_apply_force() {
-        let audio_manager = Rc::new(RefCell::new(
+        let audio_manager = Arc::new(Mutex::new(
             AudioManager::<DefaultBackend>::new(AudioManagerSettings::default()).unwrap(),
         ));
 
-        let track = Rc::new(RefCell::new(
+        let track = Arc::new(Mutex::new(
             audio_manager
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .add_sub_track(TrackBuilder::new())
                 .unwrap(),
         ));

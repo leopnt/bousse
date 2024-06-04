@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::sync::{Arc, Mutex};
 
 use kira::{
     manager::{AudioManager, AudioManagerSettings, DefaultBackend},
@@ -7,14 +7,14 @@ use kira::{
 };
 
 pub struct Mixer {
-    audio_manager: Rc<RefCell<AudioManager>>,
+    audio_manager: Arc<Mutex<AudioManager>>,
     master_track: TrackHandle,
     cue_track: TrackHandle,
     cue_mix_value: f64,
-    ch_one_track: Rc<RefCell<TrackHandle>>,
+    ch_one_track: Arc<Mutex<TrackHandle>>,
     cue_one_enabled: bool,
     ch_one_volume: f64,
-    ch_two_track: Rc<RefCell<TrackHandle>>,
+    ch_two_track: Arc<Mutex<TrackHandle>>,
     cue_two_enabled: bool,
     ch_two_volume: f64,
 }
@@ -48,28 +48,28 @@ impl Mixer {
             .unwrap();
 
         Self {
-            audio_manager: Rc::new(RefCell::new(manager)),
+            audio_manager: Arc::new(Mutex::new(manager)),
             master_track: master,
             cue_track: cue,
             cue_mix_value: 0.5,
-            ch_one_track: Rc::new(RefCell::new(track_one)),
+            ch_one_track: Arc::new(Mutex::new(track_one)),
             cue_one_enabled: false,
             ch_one_volume: 0.0,
-            ch_two_track: Rc::new(RefCell::new(track_two)),
+            ch_two_track: Arc::new(Mutex::new(track_two)),
             cue_two_enabled: false,
             ch_two_volume: 0.0,
         }
     }
 
-    pub fn get_audio_manager(&self) -> Rc<RefCell<AudioManager>> {
+    pub fn get_audio_manager(&self) -> Arc<Mutex<AudioManager>> {
         self.audio_manager.clone()
     }
 
-    pub fn get_ch_one_track(&self) -> Rc<RefCell<TrackHandle>> {
+    pub fn get_ch_one_track(&self) -> Arc<Mutex<TrackHandle>> {
         self.ch_one_track.clone()
     }
 
-    pub fn get_ch_two_track(&self) -> Rc<RefCell<TrackHandle>> {
+    pub fn get_ch_two_track(&self) -> Arc<Mutex<TrackHandle>> {
         self.ch_two_track.clone()
     }
 
@@ -95,7 +95,8 @@ impl Mixer {
         self.cue_one_enabled = enabled;
 
         self.ch_one_track
-            .borrow_mut()
+            .lock()
+            .unwrap()
             .set_route(
                 &self.cue_track,
                 if self.cue_one_enabled { 1.0 } else { 0.0 },
@@ -112,7 +113,8 @@ impl Mixer {
         self.cue_two_enabled = enabled;
 
         self.ch_two_track
-            .borrow_mut()
+            .lock()
+            .unwrap()
             .set_route(
                 &self.cue_track,
                 if self.cue_two_enabled { 1.0 } else { 0.0 },
@@ -129,7 +131,8 @@ impl Mixer {
         self.ch_one_volume = volume;
 
         self.ch_one_track
-            .borrow_mut()
+            .lock()
+            .unwrap()
             .set_route(&self.master_track, self.ch_one_volume, Tween::default())
             .unwrap();
     }
@@ -142,7 +145,8 @@ impl Mixer {
         self.ch_two_volume = volume;
 
         self.ch_two_track
-            .borrow_mut()
+            .lock()
+            .unwrap()
             .set_route(&self.master_track, self.ch_two_volume, Tween::default())
             .unwrap();
     }
