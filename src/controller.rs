@@ -25,6 +25,10 @@ pub enum BoothEvent<'a> {
     VolumeTwoChanged(f64),
     PitchOneChanged(f64),
     PitchTwoChanged(f64),
+    EqLowOneChanged(f64),
+    EqHighOneChanged(f64),
+    EqLowTwoChanged(f64),
+    EqHighTwoChanged(f64),
     SeekOne(f64),
     SeekTwo(f64),
 }
@@ -68,6 +72,18 @@ impl Controller {
             }
             (BoothEvent::PitchTwoChanged(pitch), _) => {
                 app_data.turntable_two.set_pitch(*pitch);
+            }
+            (BoothEvent::EqLowOneChanged(gain), _) => {
+                app_data.mixer.set_eq_low_one_gain(*gain);
+            }
+            (BoothEvent::EqHighOneChanged(gain), _) => {
+                app_data.mixer.set_eq_high_one_gain(*gain);
+            }
+            (BoothEvent::EqLowTwoChanged(gain), _) => {
+                app_data.mixer.set_eq_low_two_gain(*gain);
+            }
+            (BoothEvent::EqHighTwoChanged(gain), _) => {
+                app_data.mixer.set_eq_high_two_gain(*gain);
             }
             (BoothEvent::ScratchBegin, TurntableFocus::One) => {
                 app_data.turntable_one.start_scratching();

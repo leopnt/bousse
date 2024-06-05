@@ -239,6 +239,50 @@ impl App {
                 self.controller
                     .handle_event(&mut self.app_data, BoothEvent::PitchTwoChanged(value))
             }
+            [_, 17, value] => {
+                let value = remap(
+                    ((*value + 1) as f64).log10() as f64,
+                    0.0,
+                    127.0_f64.log10(),
+                    -24.0,
+                    3.0,
+                );
+                self.controller
+                    .handle_event(&mut self.app_data, BoothEvent::EqLowOneChanged(value))
+            }
+            [_, 16, value] => {
+                let value = remap(
+                    ((*value + 1) as f64).log10() as f64,
+                    0.0,
+                    127.0_f64.log10(),
+                    -24.0,
+                    3.0,
+                );
+                self.controller
+                    .handle_event(&mut self.app_data, BoothEvent::EqHighOneChanged(value))
+            }
+            [_, 21, value] => {
+                let value = remap(
+                    ((*value + 1) as f64).log10() as f64,
+                    0.0,
+                    127.0_f64.log10(),
+                    -24.0,
+                    3.0,
+                );
+                self.controller
+                    .handle_event(&mut self.app_data, BoothEvent::EqLowTwoChanged(value))
+            }
+            [_, 20, value] => {
+                let value = remap(
+                    ((*value + 1) as f64).log10() as f64,
+                    0.0,
+                    127.0_f64.log10(),
+                    -24.0,
+                    3.0,
+                );
+                self.controller
+                    .handle_event(&mut self.app_data, BoothEvent::EqHighTwoChanged(value))
+            }
             _ => {
                 log::info!("App received unmatched midi message: {:?}", message);
             }
@@ -329,6 +373,22 @@ fn run_ui(
                             .vertical(),
                     );
                     controller.handle_event(app_data, BoothEvent::PitchOneChanged(pitch_one));
+
+                    let mut eq_low_one = app_data.mixer.get_eq_low_one_gain();
+                    ui.add(
+                        egui::Slider::new(&mut eq_low_one, -24.0..=3.0)
+                            .text("LOW ONE")
+                            .vertical(),
+                    );
+                    controller.handle_event(app_data, BoothEvent::EqLowOneChanged(eq_low_one));
+
+                    let mut eq_high_one = app_data.mixer.get_eq_high_one_gain();
+                    ui.add(
+                        egui::Slider::new(&mut eq_high_one, -24.0..=3.0)
+                            .text("HIGH ONE")
+                            .vertical(),
+                    );
+                    controller.handle_event(app_data, BoothEvent::EqHighOneChanged(eq_high_one));
                 });
 
                 let cue_one = app_data.mixer.is_cue_one_enabled();
@@ -406,6 +466,22 @@ fn run_ui(
                             .vertical(),
                     );
                     controller.handle_event(app_data, BoothEvent::PitchTwoChanged(pitch_two));
+
+                    let mut eq_low_two = app_data.mixer.get_eq_low_two_gain();
+                    ui.add(
+                        egui::Slider::new(&mut eq_low_two, -24.0..=3.0)
+                            .text("LOW TWO")
+                            .vertical(),
+                    );
+                    controller.handle_event(app_data, BoothEvent::EqLowTwoChanged(eq_low_two));
+
+                    let mut eq_high_two = app_data.mixer.get_eq_high_two_gain();
+                    ui.add(
+                        egui::Slider::new(&mut eq_high_two, -24.0..=3.0)
+                            .text("HIGH TWO")
+                            .vertical(),
+                    );
+                    controller.handle_event(app_data, BoothEvent::EqHighTwoChanged(eq_high_two));
                 });
 
                 let cue_two = app_data.mixer.is_cue_two_enabled();

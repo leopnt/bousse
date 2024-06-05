@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use kira::{
+    effect::eq_filter::{EqFilterBuilder, EqFilterHandle, EqFilterKind},
     manager::{AudioManager, AudioManagerSettings, DefaultBackend},
     track::{TrackBuilder, TrackHandle, TrackRoutes},
     tween::Tween,
@@ -14,9 +15,17 @@ pub struct Mixer {
     ch_one_track: Arc<Mutex<TrackHandle>>,
     cue_one_enabled: bool,
     ch_one_volume: f64,
+    eq_low_one: EqFilterHandle,
+    eq_low_one_gain: f64,
+    eq_high_one: EqFilterHandle,
+    eq_high_one_gain: f64,
     ch_two_track: Arc<Mutex<TrackHandle>>,
     cue_two_enabled: bool,
     ch_two_volume: f64,
+    eq_low_two: EqFilterHandle,
+    eq_low_two_gain: f64,
+    eq_high_two: EqFilterHandle,
+    eq_high_two_gain: f64,
 }
 
 impl Mixer {
@@ -27,24 +36,60 @@ impl Mixer {
         let master = manager.add_sub_track(TrackBuilder::new()).unwrap();
         let cue = manager.add_sub_track(TrackBuilder::new()).unwrap();
 
+        let eq_low_one;
+        let eq_high_one;
         let track_one = manager
-            .add_sub_track(
-                TrackBuilder::new().volume(1.).routes(
+            .add_sub_track({
+                let mut builder = TrackBuilder::new().volume(1.).routes(
                     TrackRoutes::empty()
                         .with_route(&master, 0.0)
                         .with_route(&cue, 0.0),
-                ),
-            )
+                );
+
+                eq_low_one = builder.add_effect(EqFilterBuilder::new(
+                    EqFilterKind::LowShelf,
+                    300.0,
+                    0.0,
+                    0.2,
+                ));
+
+                eq_high_one = builder.add_effect(EqFilterBuilder::new(
+                    EqFilterKind::HighShelf,
+                    1000.0,
+                    0.0,
+                    0.2,
+                ));
+
+                builder
+            })
             .unwrap();
 
+        let eq_low_two;
+        let eq_high_two;
         let track_two = manager
-            .add_sub_track(
-                TrackBuilder::new().volume(1.).routes(
+            .add_sub_track({
+                let mut builder = TrackBuilder::new().volume(1.).routes(
                     TrackRoutes::empty()
                         .with_route(&master, 0.0)
                         .with_route(&cue, 0.0),
-                ),
-            )
+                );
+
+                eq_low_two = builder.add_effect(EqFilterBuilder::new(
+                    EqFilterKind::LowShelf,
+                    300.0,
+                    0.0,
+                    0.2,
+                ));
+
+                eq_high_two = builder.add_effect(EqFilterBuilder::new(
+                    EqFilterKind::HighShelf,
+                    1000.0,
+                    0.0,
+                    0.2,
+                ));
+
+                builder
+            })
             .unwrap();
 
         Self {
@@ -55,9 +100,17 @@ impl Mixer {
             ch_one_track: Arc::new(Mutex::new(track_one)),
             cue_one_enabled: false,
             ch_one_volume: 0.0,
+            eq_low_one: eq_low_one,
+            eq_low_one_gain: 0.0,
+            eq_high_one: eq_high_one,
+            eq_high_one_gain: 0.0,
             ch_two_track: Arc::new(Mutex::new(track_two)),
             cue_two_enabled: false,
             ch_two_volume: 0.0,
+            eq_low_two: eq_low_two,
+            eq_low_two_gain: 0.0,
+            eq_high_two: eq_high_two,
+            eq_high_two_gain: 0.0,
         }
     }
 
@@ -149,6 +202,46 @@ impl Mixer {
             .unwrap()
             .set_route(&self.master_track, self.ch_two_volume, Tween::default())
             .unwrap();
+    }
+
+    pub fn get_eq_low_one_gain(&self) -> f64 {
+        self.eq_low_one_gain
+    }
+
+    pub fn set_eq_low_one_gain(&mut self, gain: f64) {
+        self.eq_low_one_gain = gain;
+        self.eq_low_one
+            .set_gain(self.eq_low_one_gain, Tween::default());
+    }
+
+    pub fn get_eq_high_one_gain(&self) -> f64 {
+        self.eq_high_one_gain
+    }
+
+    pub fn set_eq_high_one_gain(&mut self, gain: f64) {
+        self.eq_high_one_gain = gain;
+        self.eq_high_one
+            .set_gain(self.eq_high_one_gain, Tween::default());
+    }
+
+    pub fn get_eq_low_two_gain(&self) -> f64 {
+        self.eq_low_two_gain
+    }
+
+    pub fn set_eq_low_two_gain(&mut self, gain: f64) {
+        self.eq_low_two_gain = gain;
+        self.eq_low_two
+            .set_gain(self.eq_low_two_gain, Tween::default());
+    }
+
+    pub fn get_eq_high_two_gain(&self) -> f64 {
+        self.eq_high_two_gain
+    }
+
+    pub fn set_eq_high_two_gain(&mut self, gain: f64) {
+        self.eq_high_two_gain = gain;
+        self.eq_high_two
+            .set_gain(self.eq_high_two_gain, Tween::default());
     }
 
     /// Explode a given value between 0.0 and 1.0 into respective mixed values.
