@@ -21,7 +21,7 @@ impl MidiController {
         let in_port = match in_ports.len() {
             0 => panic!("No MIDI Input port found"),
             1 => {
-                println!(
+                log::info!(
                     "Choosing the only available input port: {}",
                     midi_in.port_name(&in_ports[0]).unwrap()
                 );
@@ -42,7 +42,7 @@ impl MidiController {
             }
         };
 
-        println!("\nOpening MIDI connection");
+        log::info!("\nOpening MIDI connection");
         let in_port_name = midi_in.port_name(in_port).unwrap();
 
         let _conn_in = midi_in
@@ -56,7 +56,7 @@ impl MidiController {
             )
             .unwrap();
 
-        println!(
+        log::info!(
             "Connection open, reading MIDI input from '{}'",
             in_port_name
         );
