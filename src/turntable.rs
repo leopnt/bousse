@@ -49,6 +49,12 @@ impl From<PlaySoundError<()>> for LoadError {
     }
 }
 
+#[derive(Debug)]
+pub enum SeekError {
+    EmptyDuration,
+    EmptySound,
+}
+
 impl Turntable {
     /// Creates a new instance of a turntable
     pub fn new(
@@ -137,13 +143,13 @@ impl Turntable {
         self.force += force;
     }
 
-    pub fn seek(&mut self, percent: f32) {
-        let duration = self.duration().unwrap(); // TODO: output a result
+    pub fn seek(&mut self, percent: f64) -> Result<(), SeekError> {
+        let duration = self.duration().ok_or(SeekError::EmptyDuration)?;
+        let sound = self.sound.as_mut().ok_or(SeekError::EmptySound)?;
 
-        self.sound
-            .as_mut()
-            .unwrap()
-            .seek_to((percent * duration as f32) as f64);
+        sound.seek_to(percent * duration);
+
+        Ok(())
     }
 }
 

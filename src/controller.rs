@@ -25,7 +25,8 @@ pub enum BoothEvent<'a> {
     VolumeTwoChanged(f64),
     PitchOneChanged(f64),
     PitchTwoChanged(f64),
-    SeekOne(f32),
+    SeekOne(f64),
+    SeekTwo(f64),
 }
 
 pub struct Controller {}
@@ -87,7 +88,16 @@ impl Controller {
                 app_data.turntable_two.apply_force(*force);
             }
             (BoothEvent::SeekOne(percent), _) => {
-                app_data.turntable_one.seek(*percent);
+                match app_data.turntable_one.seek(*percent) {
+                    Ok(()) => (),
+                    Err(e) => log::error!("Cannot seek track one: {:?}", e),
+                };
+            }
+            (BoothEvent::SeekTwo(percent), _) => {
+                match app_data.turntable_two.seek(*percent) {
+                    Ok(()) => (),
+                    Err(e) => log::error!("Cannot seek track two: {:?}", e),
+                };
             }
         }
     }

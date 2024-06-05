@@ -33,7 +33,7 @@ This is the features that I consider the bare-minimum to be able to mix tracks t
   - [x] Fast pitch variation
   - [x] Soft touch / temporary pitch shift
   - [x] Hard touch / Cueing
-  - [ ] Fast seek
+  - [x] Fast seek
 - [ ] Controllable via MIDI controller
 
 ### Additional Features (but still important 🤓)
