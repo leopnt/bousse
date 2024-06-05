@@ -15,7 +15,7 @@ use crate::gui::Gui;
 use crate::mixer::Mixer;
 use crate::processable::Processable;
 use crate::turntable::Turntable;
-use crate::utils::to_min_sec_millis_str;
+use crate::utils::{remap, to_min_sec_millis_str};
 
 pub struct AppData {
     pub fps: u8,
@@ -217,7 +217,32 @@ impl App {
     }
 
     pub fn on_midi_event(&mut self, message: &[u8]) {
-        println!("App received midi message: {:?}", message);
+        // hard coded values for my controller here
+        match message {
+            [_, 18, value] => {
+                let value = remap(*value as f64, 0.0, 127.0, 0.0, 1.0);
+                self.controller
+                    .handle_event(&mut self.app_data, BoothEvent::VolumeOneChanged(value))
+            }
+            [_, 22, value] => {
+                let value = remap(*value as f64, 0.0, 127.0, 0.0, 1.0);
+                self.controller
+                    .handle_event(&mut self.app_data, BoothEvent::VolumeTwoChanged(value))
+            }
+            [_, 19, value] => {
+                let value = remap(*value as f64, 0.0, 127.0, 1.06, 0.94);
+                self.controller
+                    .handle_event(&mut self.app_data, BoothEvent::PitchOneChanged(value))
+            }
+            [_, 23, value] => {
+                let value = remap(*value as f64, 0.0, 127.0, 1.06, 0.94);
+                self.controller
+                    .handle_event(&mut self.app_data, BoothEvent::PitchTwoChanged(value))
+            }
+            _ => {
+                log::info!("App received unmatched midi message: {:?}", message);
+            }
+        }
     }
 }
 

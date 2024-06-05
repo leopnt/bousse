@@ -2,6 +2,10 @@ pub fn lerp(from: f64, to: f64, weight: f64) -> f64 {
     from + (to - from) * weight
 }
 
+pub fn remap(value: f64, istart: f64, iend: f64, ostart: f64, oend: f64) -> f64 {
+    ostart + (oend - ostart) * ((value - istart) / (iend - istart))
+}
+
 pub fn to_min_sec_millis_str(time_sec: f64) -> String {
     let integer_part = time_sec.trunc() as u64;
     let fractional_part = time_sec.fract();
@@ -10,7 +14,7 @@ pub fn to_min_sec_millis_str(time_sec: f64) -> String {
     let seconds = integer_part % 60;
     let millis = (fractional_part * 1000.0).round();
 
-    if time_sec >= 60.0 * 60.0  {
+    if time_sec >= 60.0 * 60.0 {
         return "INF".to_string();
     }
 
