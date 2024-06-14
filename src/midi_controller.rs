@@ -6,7 +6,7 @@ use midir::{Ignore, MidiInput, MidiInputConnection};
 use crate::app::App;
 
 pub struct MidiController {
-    _conn_in: MidiInputConnection<Arc<Mutex<App>>>,
+    _conn_in: Option<MidiInputConnection<Arc<Mutex<App>>>>,
 }
 
 impl MidiController {
@@ -19,7 +19,10 @@ impl MidiController {
 
         let in_ports = midi_in.ports();
         let in_port = match in_ports.len() {
-            0 => panic!("No MIDI Input port found"),
+            0 => {
+                log::warn!("No MIDI Input port found");
+                return Self { _conn_in: None };
+            }
             1 => {
                 log::info!(
                     "Choosing the only available input port: {}",
@@ -61,6 +64,8 @@ impl MidiController {
             in_port_name
         );
 
-        Self { _conn_in }
+        Self {
+            _conn_in: Some(_conn_in),
+        }
     }
 }
