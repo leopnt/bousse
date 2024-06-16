@@ -375,6 +375,13 @@ fn run_ui(
 
         ui.columns(2, |cols| {
             cols[0].vertical_centered_justified(|ui| {
+                ui.with_layout(Layout::top_down_justified(egui::Align::LEFT), |ui| {
+                    ui.add(match app_data.turntable_one.currently_loaded() {
+                        Some(path) => Label::new(path.split('/').last().unwrap()),
+                        None => Label::new("No Track Loaded"),
+                    })
+                });
+
                 let (position, duration, position_display, duration_display) = match (
                     app_data.turntable_one.position(),
                     app_data.turntable_one.duration(),
@@ -468,6 +475,13 @@ fn run_ui(
             });
 
             cols[1].vertical_centered_justified(|ui| {
+                ui.with_layout(Layout::top_down_justified(egui::Align::LEFT), |ui| {
+                    ui.add(match app_data.turntable_two.currently_loaded() {
+                        Some(path) => Label::new(path.split('/').last().unwrap()),
+                        None => Label::new("No Track Loaded"),
+                    })
+                });
+
                 let (position, duration, position_display, duration_display) = match (
                     app_data.turntable_two.position(),
                     app_data.turntable_two.duration(),

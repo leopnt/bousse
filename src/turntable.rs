@@ -29,6 +29,7 @@ pub struct Turntable {
     is_scratching: bool,
     /// the current force on the vinyl (to be consumed into pitch variation)
     force: f64,
+    currently_loaded: Option<String>,
 }
 
 #[derive(Debug)]
@@ -71,6 +72,7 @@ impl Turntable {
             is_playing: false,
             is_scratching: false,
             force: 0.0,
+            currently_loaded: None,
         }
     }
 
@@ -100,7 +102,13 @@ impl Turntable {
             };
         }
 
+        self.currently_loaded = Some(path.to_string_lossy().to_string());
+
         Ok(())
+    }
+
+    pub fn currently_loaded(&self) -> Option<String> {
+        self.currently_loaded.clone()
     }
 
     pub fn pitch(&self) -> f64 {

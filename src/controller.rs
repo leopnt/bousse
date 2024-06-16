@@ -132,7 +132,7 @@ impl Controller {
             (BoothEvent::FileNavigatorSelect, TurntableFocus::One) => {
                 match app_data.file_navigator.select() {
                     FileNavigatorSelection::File(file_path) => {
-                        app_data.turntable_one.load(Path::new(&file_path)).unwrap();
+                        self.handle_event(app_data, BoothEvent::TrackLoad(Path::new(&file_path)));
                     }
                     _ => (),
                 }
@@ -140,7 +140,7 @@ impl Controller {
             (BoothEvent::FileNavigatorSelect, TurntableFocus::Two) => {
                 match app_data.file_navigator.select() {
                     FileNavigatorSelection::File(file_path) => {
-                        app_data.turntable_two.load(Path::new(&file_path)).unwrap();
+                        self.handle_event(app_data, BoothEvent::TrackLoad(Path::new(&file_path)));
                     }
                     _ => (),
                 }
