@@ -8,8 +8,8 @@ Because
 
 - I didn't find a DJ software that gives me a similar experience as having only two turntables and a simple mixer.
 - Album covers are very important to find tracks quickly. I want to navigate my music files the same way I look for records.
-- I don't have a DJ controller on me right now. It is very expensive, and I wanted to test if a trackpad was sufficient (spoiler: it is).
-- I wanted to gain experience building projects in Rust and I thought this was a very complete one (multi-threading, physics simulation, events, UI, audio, DSP, MIDI controller, ...). Fortunately I don't have to go low level as good quality libraries already exist such as `winit`, `kira`, `midir` 🙏. Happens that everything was working as intended, so I just had to glue the parts together and simulate the turntable's behavior.
+- I don't have a DJ controller on me right now. I wanted to test if a trackpad was sufficient (spoiler: it is).
+- I wanted to gain experience building projects in Rust and I thought this was a very complete one (multi-threading, physics simulation, events, UI, audio, DSP, MIDI controller, ...). Fortunately I don't have to go low level as good quality libraries already exist such as `winit`, `kira`, `midir`, `egui` 🙏. Happens that everything was working as intended, so I just had to glue the parts together and simulate the turntable's behavior.
 
 ## NB
 
