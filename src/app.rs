@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use egui::{Label, Layout, Rounding, ScrollArea, SelectableLabel, Visuals};
+use egui::{Image, Label, Layout, Rounding, ScrollArea, SelectableLabel, Visuals};
 use egui_wgpu::ScreenDescriptor;
 use winit::event::{DeviceEvent, ElementState, KeyEvent, Modifiers, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget};
@@ -9,6 +9,7 @@ use winit::keyboard::{KeyCode, ModifiersState, PhysicalKey};
 use winit::window::{Window, WindowBuilder};
 
 use crate::controller::{BoothEvent, Controller, TurntableFocus};
+use crate::cover_img::CoverImg;
 use crate::file_navigator::FileNavigator;
 use crate::gpu::Gpu;
 use crate::gui::Gui;
@@ -27,6 +28,8 @@ pub struct AppData {
     pub turntable_focus: TurntableFocus,
     pub modifiers_key: Modifiers,
     pub file_navigator: FileNavigator,
+    pub cover_one: CoverImg,
+    pub cover_two: CoverImg,
 }
 
 pub struct App {
@@ -72,6 +75,8 @@ impl App {
             file_navigator: FileNavigator::new(
                 &dotenv::var("ROOT_DIR").expect("ROOT_DIR environment variable not present"),
             ),
+            cover_one: CoverImg::default(),
+            cover_two: CoverImg::default(),
         };
 
         Self {
@@ -442,6 +447,18 @@ fn run_ui(
                             .vertical(),
                     );
                     controller.handle_event(app_data, BoothEvent::EqHighOneChanged(eq_high_one));
+
+                    if app_data.cover_one.create_texture(ctx) {
+                        log::info!("Cover one texture created");
+                    }
+                    match app_data.cover_one.texture() {
+                        Some(texture) => ui.add(
+                            Image::new((texture.id(), texture.size_vec2()))
+                                .rounding(10.0)
+                                .shrink_to_fit(),
+                        ),
+                        None => ui.add(Label::new("No Cover")),
+                    };
                 });
 
                 let cue_one = app_data.mixer.is_cue_one_enabled();
@@ -542,6 +559,18 @@ fn run_ui(
                             .vertical(),
                     );
                     controller.handle_event(app_data, BoothEvent::EqHighTwoChanged(eq_high_two));
+
+                    if app_data.cover_two.create_texture(ctx) {
+                        log::info!("Cover two texture created");
+                    }
+                    match app_data.cover_two.texture() {
+                        Some(texture) => ui.add(
+                            Image::new((texture.id(), texture.size_vec2()))
+                                .rounding(10.0)
+                                .shrink_to_fit(),
+                        ),
+                        None => ui.add(Label::new("No Cover")),
+                    };
                 });
 
                 let cue_two = app_data.mixer.is_cue_two_enabled();

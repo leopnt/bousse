@@ -1,3 +1,5 @@
+use std::path::{Path, PathBuf};
+
 pub fn lerp(from: f64, to: f64, weight: f64) -> f64 {
     from + (to - from) * weight
 }
@@ -19,4 +21,12 @@ pub fn to_min_sec_millis_str(time_sec: f64) -> String {
     }
 
     format!("{:02}:{:02}:{:03}", minutes, seconds, millis)
+}
+
+pub fn to_cover_path(audio_file_path: &String) -> String {
+    let path = Path::new(&audio_file_path);
+    let mut cover_path = PathBuf::from(path);
+    cover_path.set_file_name("cover.jpg");
+
+    cover_path.to_string_lossy().to_string()
 }

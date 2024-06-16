@@ -41,7 +41,7 @@ This is the features that I consider the bare-minimum to be able to mix tracks t
 - [x] Have a debug panel
 - [x] Some parts controllable via UI
 - [x] Apply EQ filtering to channels
-- [ ] Dynamic display of album / track covers
+- [x] Dynamic display of album / track covers
 - [ ] VU / RMS real time volume meter visual feedback
 - [x] File explorer
 - [ ] Recording of the master track to a file

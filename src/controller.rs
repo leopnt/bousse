@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::{app::AppData, file_navigator::FileNavigatorSelection};
+use crate::{app::AppData, file_navigator::FileNavigatorSelection, utils::to_cover_path};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TurntableFocus {
@@ -50,10 +50,18 @@ impl Controller {
             (BoothEvent::ToggleDebug, _) => app_data.show_debug_panel = !app_data.show_debug_panel,
             (BoothEvent::CueMixChanged(mix), _) => app_data.mixer.set_cue_mix_value(*mix),
             (BoothEvent::TrackLoad(path), TurntableFocus::One) => {
-                app_data.turntable_one.load(path).unwrap()
+                app_data.turntable_one.load(path).unwrap();
+
+                app_data
+                    .cover_one
+                    .load_image_data(&to_cover_path(&path.to_string_lossy().to_string()));
             }
             (BoothEvent::TrackLoad(path), TurntableFocus::Two) => {
-                app_data.turntable_two.load(path).unwrap()
+                app_data.turntable_two.load(path).unwrap();
+
+                app_data
+                    .cover_two
+                    .load_image_data(&to_cover_path(&path.to_string_lossy().to_string()));
             }
             (BoothEvent::ToggleStartStopOne, _) => app_data.turntable_one.toggle_start_stop(),
             (BoothEvent::ToggleStartStopTwo, _) => app_data.turntable_two.toggle_start_stop(),

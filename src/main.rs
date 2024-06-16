@@ -9,13 +9,14 @@ use winit::{
 
 mod app;
 mod controller;
+mod cover_img;
+mod file_navigator;
 mod gpu;
 mod gui;
 mod midi_controller;
 mod mixer;
 mod processable;
 mod turntable;
-mod file_navigator;
 mod utils;
 
 use app::App;
