@@ -15,6 +15,7 @@ mod midi_controller;
 mod mixer;
 mod processable;
 mod turntable;
+mod file_navigator;
 mod utils;
 
 use app::App;

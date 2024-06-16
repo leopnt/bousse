@@ -1,8 +1,7 @@
-use std::env;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use egui::{Rounding, Visuals};
+use egui::{Label, Layout, Rounding, ScrollArea, SelectableLabel, Visuals};
 use egui_wgpu::ScreenDescriptor;
 use winit::event::{DeviceEvent, ElementState, KeyEvent, Modifiers, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget};
@@ -10,6 +9,7 @@ use winit::keyboard::{KeyCode, ModifiersState, PhysicalKey};
 use winit::window::{Window, WindowBuilder};
 
 use crate::controller::{BoothEvent, Controller, TurntableFocus};
+use crate::file_navigator::FileNavigator;
 use crate::gpu::Gpu;
 use crate::gui::Gui;
 use crate::mixer::Mixer;
@@ -26,6 +26,7 @@ pub struct AppData {
     pub turntable_two: Turntable,
     pub turntable_focus: TurntableFocus,
     pub modifiers_key: Modifiers,
+    pub file_navigator: FileNavigator,
 }
 
 pub struct App {
@@ -68,6 +69,9 @@ impl App {
             turntable_two: Turntable::new(audio_manager_clone_two, ch_two_track_clone),
             turntable_focus: TurntableFocus::One,
             modifiers_key: Modifiers::default(),
+            file_navigator: FileNavigator::new(
+                &dotenv::var("ROOT_DIR").expect("ROOT_DIR environment variable not present"),
+            ),
         };
 
         Self {
@@ -188,6 +192,22 @@ impl App {
             ) => {
                 self.controller
                     .handle_event(&mut self.app_data, BoothEvent::ToggleDebug);
+            }
+            (PhysicalKey::Code(KeyCode::ArrowDown), ElementState::Pressed, _, _) => {
+                self.controller
+                    .handle_event(&mut self.app_data, BoothEvent::FileNavigatorDown);
+            }
+            (PhysicalKey::Code(KeyCode::ArrowUp), ElementState::Pressed, _, _) => {
+                self.controller
+                    .handle_event(&mut self.app_data, BoothEvent::FileNavigatorUp);
+            }
+            (PhysicalKey::Code(KeyCode::ArrowRight), ElementState::Pressed, false, _) => {
+                self.controller
+                    .handle_event(&mut self.app_data, BoothEvent::FileNavigatorSelect);
+            }
+            (PhysicalKey::Code(KeyCode::ArrowLeft), ElementState::Pressed, false, _) => {
+                self.controller
+                    .handle_event(&mut self.app_data, BoothEvent::FileNavigatorBack);
             }
             _ => (),
         }
@@ -324,6 +344,32 @@ fn run_ui(
         let mut cue_mix = app_data.mixer.get_cue_mix_value();
         ui.add(egui::Slider::new(&mut cue_mix, 0.0..=1.0).text("Cue Mix"));
         controller.handle_event(app_data, BoothEvent::CueMixChanged(cue_mix));
+
+        ui.separator();
+
+        ScrollArea::vertical()
+            .auto_shrink([false, false])
+            .max_height(ui.available_height() * 0.3)
+            .show(ui, |ui| {
+                if app_data.file_navigator.entries().is_empty() {
+                    ui.add(Label::new("Oops! There is nothing here..."));
+                    return;
+                };
+
+                ui.with_layout(Layout::top_down_justified(egui::Align::LEFT), |ui| {
+                    for entry in app_data.file_navigator.entries().clone().iter() {
+                        ui.add(SelectableLabel::new(
+                            app_data.file_navigator.selected() == Some(entry),
+                            entry,
+                        ));
+
+                        // ensure the selected element is visible
+                        if app_data.file_navigator.selected() == Some(entry) {
+                            ui.scroll_to_cursor(Some(egui::Align::Center));
+                        }
+                    }
+                });
+            });
 
         ui.separator();
 

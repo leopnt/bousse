@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::app::AppData;
+use crate::{app::AppData, file_navigator::FileNavigatorSelection};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TurntableFocus {
@@ -31,6 +31,10 @@ pub enum BoothEvent<'a> {
     EqHighTwoChanged(f64),
     SeekOne(f64),
     SeekTwo(f64),
+    FileNavigatorDown,
+    FileNavigatorUp,
+    FileNavigatorSelect,
+    FileNavigatorBack,
 }
 
 pub struct Controller {}
@@ -114,6 +118,32 @@ impl Controller {
                     Ok(()) => (),
                     Err(e) => log::error!("Cannot seek track two: {:?}", e),
                 };
+            }
+            (BoothEvent::FileNavigatorUp, _) => {
+                app_data.file_navigator.go_up();
+            }
+            (BoothEvent::FileNavigatorDown, _) => {
+                app_data.file_navigator.go_down();
+            }
+            (BoothEvent::FileNavigatorBack, _) => match app_data.file_navigator.go_back() {
+                Err(e) => log::error!("{}", e),
+                _ => (),
+            },
+            (BoothEvent::FileNavigatorSelect, TurntableFocus::One) => {
+                match app_data.file_navigator.select() {
+                    FileNavigatorSelection::File(file_path) => {
+                        app_data.turntable_one.load(Path::new(&file_path)).unwrap();
+                    }
+                    _ => (),
+                }
+            }
+            (BoothEvent::FileNavigatorSelect, TurntableFocus::Two) => {
+                match app_data.file_navigator.select() {
+                    FileNavigatorSelection::File(file_path) => {
+                        app_data.turntable_two.load(Path::new(&file_path)).unwrap();
+                    }
+                    _ => (),
+                }
             }
         }
     }
