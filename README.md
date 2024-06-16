@@ -1,6 +1,8 @@
 # Bousse
 
-A lightweight DJ booth software with trackpad support for personal use
+Lightweight DJ booth software with trackpad support for personal use (work in progress)
+
+![preview](.github/preview.png)
 
 ## Why 🤠
 
