@@ -50,18 +50,20 @@ impl Controller {
             (BoothEvent::ToggleDebug, _) => app_data.show_debug_panel = !app_data.show_debug_panel,
             (BoothEvent::CueMixChanged(mix), _) => app_data.mixer.set_cue_mix_value(*mix),
             (BoothEvent::TrackLoad(path), TurntableFocus::One) => {
-                app_data.turntable_one.load(path).unwrap();
-
-                app_data
-                    .cover_one
-                    .load_image_data(&to_cover_path(&path.to_string_lossy().to_string()));
+                match app_data.turntable_one.load(path) {
+                    Ok(_) => app_data
+                        .cover_one
+                        .load_image_data(&to_cover_path(&path.to_string_lossy().to_string())),
+                    Err(e) => log::error!("Cannot load track: {:?}", e),
+                };
             }
             (BoothEvent::TrackLoad(path), TurntableFocus::Two) => {
-                app_data.turntable_two.load(path).unwrap();
-
-                app_data
-                    .cover_two
-                    .load_image_data(&to_cover_path(&path.to_string_lossy().to_string()));
+                match app_data.turntable_two.load(path) {
+                    Ok(_) => app_data
+                        .cover_two
+                        .load_image_data(&to_cover_path(&path.to_string_lossy().to_string())),
+                    Err(e) => log::error!("Cannot load track: {:?}", e),
+                };
             }
             (BoothEvent::ToggleStartStopOne, _) => app_data.turntable_one.toggle_start_stop(),
             (BoothEvent::ToggleStartStopTwo, _) => app_data.turntable_two.toggle_start_stop(),

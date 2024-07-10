@@ -36,6 +36,7 @@ pub struct Turntable {
 pub enum LoadError {
     FromFile(FromFileError),
     Play(PlaySoundError<()>),
+    IsPlaying,
 }
 
 impl From<FromFileError> for LoadError {
@@ -78,6 +79,10 @@ impl Turntable {
 
     /// Load an audio file into the turntable
     pub fn load(&mut self, path: &Path) -> Result<(), LoadError> {
+        if self.is_playing {
+            return Err(LoadError::IsPlaying);
+        }
+
         self.sound_data = match StaticSoundData::from_file(path) {
             Ok(sound_data) => Some(sound_data),
             Err(e) => return Err(LoadError::FromFile(e)),
