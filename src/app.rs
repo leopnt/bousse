@@ -214,6 +214,14 @@ impl App {
                 self.controller
                     .handle_event(&mut self.app_data, BoothEvent::FileNavigatorBack);
             }
+            (PhysicalKey::Code(KeyCode::KeyD), ElementState::Released, false, _) => {
+                self.controller
+                    .handle_event(&mut self.app_data, BoothEvent::ToggleStartStopOne);
+            }
+            (PhysicalKey::Code(KeyCode::KeyF), ElementState::Released, false, _) => {
+                self.controller
+                    .handle_event(&mut self.app_data, BoothEvent::ToggleStartStopTwo);
+            }
             _ => (),
         }
     }
@@ -244,6 +252,20 @@ impl App {
     pub fn on_midi_event(&mut self, message: &[u8]) {
         // hard coded values for my controller here
         match message {
+            [144, 1, _] => self
+                .controller
+                .handle_event(&mut self.app_data, BoothEvent::ToggleCueOne),
+            [144, 4, _] => self
+                .controller
+                .handle_event(&mut self.app_data, BoothEvent::ToggleCueTwo),
+            [144, 3, _] => self.controller.handle_event(
+                &mut self.app_data,
+                BoothEvent::FocusChanged(TurntableFocus::One),
+            ),
+            [144, 6, _] => self.controller.handle_event(
+                &mut self.app_data,
+                BoothEvent::FocusChanged(TurntableFocus::Two),
+            ),
             [_, 18, value] => {
                 let value = remap(*value as f64, 0.0, 127.0, 0.0, 1.0);
                 self.controller
