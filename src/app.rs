@@ -180,6 +180,17 @@ impl App {
                 .controller
                 .handle_event(&mut self.app_data, BoothEvent::ScratchEnd),
         }
+
+        match modifiers.state() {
+            ModifiersState::ALT | ModifiersState::SUPER => self
+                .window
+                .set_cursor_grab(winit::window::CursorGrabMode::Locked)
+                .unwrap(),
+            _ => self
+                .window
+                .set_cursor_grab(winit::window::CursorGrabMode::None)
+                .unwrap(),
+        };
     }
 
     pub fn on_key_event(&mut self, physical_key: PhysicalKey, state: ElementState, repeat: bool) {
