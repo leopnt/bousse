@@ -277,6 +277,11 @@ impl App {
                 &mut self.app_data,
                 BoothEvent::FocusChanged(TurntableFocus::Two),
             ),
+            [_, 26, value] => {
+                let value = remap(*value as f64, 0.0, 127.0, 0.0, 1.0);
+                self.controller
+                    .handle_event(&mut self.app_data, BoothEvent::CueMixChanged(value))
+            }
             [_, 18, value] => {
                 let value = remap(*value as f64, 0.0, 127.0, 0.0, 1.0);
                 self.controller
